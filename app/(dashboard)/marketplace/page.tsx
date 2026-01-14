@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Button, Badge, Input } from '@/components/ui';
-import EventCard from '@/components/EventCard';
+import DiscoverEventCard from '@/components/DiscoverEventCard';
 import ListingCard from '@/components/ListingCard';
 import { getActiveListings } from '@/lib/mock-data';
 import { useEventsSearch } from '@/lib/hooks/use-events';
@@ -160,8 +160,8 @@ export default function MarketplacePage() {
               </Link>
             </div>
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {listings.slice(0, viewMode === 'all' ? 4 : undefined).map((listing) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {listings.slice(0, viewMode === 'all' ? 6 : undefined).map((listing) => (
               <ListingCard key={listing.id} listing={listing} />
             ))}
           </div>
@@ -188,9 +188,9 @@ export default function MarketplacePage() {
               <p className="text-neutral-400 mt-4">Loading events...</p>
             </div>
           ) : filteredEvents.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {filteredEvents.slice(0, viewMode === 'all' ? 4 : undefined).map((event) => (
-                <EventCard
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredEvents.slice(0, viewMode === 'all' ? 6 : undefined).map((event) => (
+                <DiscoverEventCard
                   key={event.id}
                   event={event}
                   href={`/discover/${event.id}`}

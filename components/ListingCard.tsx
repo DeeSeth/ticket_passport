@@ -31,7 +31,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
 
   return (
     <Link href={`/marketplace/${listing.id}`}>
-      <div className="group relative flex hover:scale-[1.01] transition-all duration-300 cursor-pointer h-32">
+      <div className="group relative flex hover:scale-[1.01] transition-all duration-300 cursor-pointer h-32 max-w-sm">
 
         {/* Left colored stub section */}
         <div className={`relative w-20 bg-gradient-to-br ${colors.gradient} rounded-l-xl flex flex-col justify-center items-center`}>
