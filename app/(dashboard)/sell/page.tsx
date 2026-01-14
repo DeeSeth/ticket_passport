@@ -130,6 +130,7 @@ export default function SellPage() {
   }, []);
 
   // Get user's sellable tickets (excluding already listed in localStorage)
+  // For demo purposes, if user doesn't have any tickets, show user-2's (Dee's) tickets
   const sellableTickets = useMemo(() => {
     // Get ticket IDs that are already listed
     const listedTicketIds = new Set(
@@ -138,20 +139,33 @@ export default function SellPage() {
         .map(l => l.ticketId)
     );
 
-    return mockTickets
-      .filter(
+    // First try to get user's own tickets
+    let userTickets = mockTickets.filter(
+      (ticket) =>
+        ticket.ownerId === user?.id &&
+        ticket.resaleStatus === 'not_listed' &&
+        !listedTicketIds.has(ticket.id) &&
+        new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
+    );
+
+    // For demo: if user has no tickets, show user-2's (Dee's) sellable tickets
+    if (userTickets.length === 0 && user) {
+      userTickets = mockTickets.filter(
         (ticket) =>
-          ticket.ownerId === user?.id &&
+          ticket.ownerId === 'user-2' &&
           ticket.resaleStatus === 'not_listed' &&
           !listedTicketIds.has(ticket.id) &&
           new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
-      )
+      );
+    }
+
+    return userTickets
       .map((ticket) => ({
         ticket,
         event: getEventById(ticket.eventId)!,
       }))
       .filter(({ event }) => event !== undefined);
-  }, [user?.id, existingListings]);
+  }, [user?.id, user, existingListings]);
 
   const selectedTicket = useMemo(() => {
     if (!selectedTicketId) return null;
