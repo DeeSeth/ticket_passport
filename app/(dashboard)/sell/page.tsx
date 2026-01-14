@@ -47,7 +47,7 @@ function SellableTicketCard({
 
   return (
     <div
-      className={`group relative flex hover:scale-[1.01] transition-all duration-300 cursor-pointer h-32 max-w-sm ${
+      className={`group relative flex hover:scale-[1.01] transition-all duration-300 cursor-pointer h-32 max-w-lg ${
         selected ? 'ring-2 ring-amber-200 rounded-xl' : ''
       }`}
       onClick={onClick}
@@ -357,7 +357,7 @@ export default function SellPage() {
           <h2 className="text-lg font-semibold text-white">Select a ticket to sell</h2>
 
           {sellableTickets.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="space-y-3">
               {sellableTickets.map(({ ticket, event }) => (
                 <SellableTicketCard
                   key={ticket.id}
