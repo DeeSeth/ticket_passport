@@ -1,17 +1,86 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Button, Badge, Input } from '@/components/ui';
 import DiscoverEventCard from '@/components/DiscoverEventCard';
 import ListingCard from '@/components/ListingCard';
-import { getActiveListings } from '@/lib/mock-data';
+import { getActiveListings as getMockActiveListings } from '@/lib/mock-data';
+import { getActiveListings as getUserActiveListings, StoredListing } from '@/lib/listing-store';
 import { useEventsSearch } from '@/lib/hooks/use-events';
+import { Ticket, Event, ResaleListing } from '@/lib/types';
+import { useAuth } from '@/lib/auth-context';
+
+// Transform StoredListing to the format ListingCard expects
+function transformStoredListing(stored: StoredListing): ResaleListing & { ticket: Ticket; event: Event } {
+  const event: Event = {
+    id: stored.eventId,
+    name: stored.eventName,
+    artist: stored.eventArtist,
+    venue: stored.eventVenue,
+    city: stored.eventCity,
+    country: stored.eventCountry,
+    date: stored.eventDate,
+    resaleRules: {
+      maxPriceMultiplier: 2,
+      fanOnlyWindowHours: 24,
+      transferDeadlineHours: 2,
+      requiresIdMatch: false,
+      charityPercentage: 10,
+    },
+  };
+
+  const ticket: Ticket = {
+    id: stored.ticketId,
+    eventId: stored.eventId,
+    ownerId: stored.sellerId,
+    section: stored.section,
+    row: stored.row,
+    seat: stored.seat,
+    faceValue: stored.faceValue,
+    currency: stored.currency,
+    isCleared: true,
+    resaleStatus: 'listed',
+    resalePrice: stored.askingPrice,
+    barcode: `BARCODE-${stored.ticketId}`,
+    purchasedAt: new Date(),
+    originalOwnerId: stored.sellerId,
+    transferHistory: [],
+  };
+
+  const listing: ResaleListing = {
+    id: stored.id,
+    ticketId: stored.ticketId,
+    sellerId: stored.sellerId,
+    askingPrice: stored.askingPrice,
+    listedAt: new Date(stored.listedAt),
+    status: stored.status === 'active' ? 'active' : stored.status === 'sold' ? 'sold' : 'cancelled',
+    isAuction: stored.listingType === 'auction',
+    minimumBid: stored.minimumBid,
+    reservePrice: stored.reservePrice,
+    auctionEndsAt: stored.auctionEndsAt ? new Date(stored.auctionEndsAt) : undefined,
+    currentHighestBid: stored.currentHighestBid,
+    totalBids: stored.totalBids,
+  };
+
+  return { ...listing, ticket, event };
+}
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'price_low' | 'price_high'>('date');
   const [viewMode, setViewMode] = useState<'all' | 'resale' | 'events'>('all');
+  const [userListings, setUserListings] = useState<(ResaleListing & { ticket: Ticket; event: Event })[]>([]);
+  const { user } = useAuth();
+
+  // Load user-created listings from localStorage
+  useEffect(() => {
+    const storedListings = getUserActiveListings();
+    // Filter out listings from current user (they shouldn't see their own listings to buy)
+    const otherUserListings = storedListings.filter(l => l.sellerId !== user?.id);
+    const transformed = otherUserListings.map(transformStoredListing);
+    setUserListings(transformed);
+  }, [user?.id]);
 
   // Fetch Ticketmaster events
   const { events, loading: eventsLoading } = useEventsSearch({
@@ -21,7 +90,9 @@ export default function MarketplacePage() {
   });
 
   const listings = useMemo(() => {
-    let results = getActiveListings();
+    // Combine mock listings with user-created listings
+    const mockListings = getMockActiveListings();
+    let results = [...mockListings, ...userListings];
 
     // Filter by search query
     if (searchQuery) {
@@ -50,7 +121,7 @@ export default function MarketplacePage() {
     }
 
     return results;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, userListings]);
 
   // Filter events by search query
   const filteredEvents = useMemo(() => {

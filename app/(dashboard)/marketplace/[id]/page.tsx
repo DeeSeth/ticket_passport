@@ -276,6 +276,11 @@ export default function MarketplaceDetailPage() {
         amount: total,
         currency: ticket.currency,
       });
+
+      // Mark listing as sold if it's a user-created listing
+      if (listingData.isUserListing) {
+        markListingSold(listing.id, user.id);
+      }
     }
 
     setStep('success');

@@ -254,9 +254,16 @@ export default function MyListingsPage() {
                           </>
                         )}
                         {listing.status === 'sold' && (
-                          <Badge variant="success">
-                            Sold for {formatCurrency(listing.askingPrice, listing.currency)}
-                          </Badge>
+                          <div className="text-right">
+                            <Badge variant="success">
+                              Sold for {formatCurrency(listing.askingPrice, listing.currency)}
+                            </Badge>
+                            {listing.soldAt && (
+                              <p className="text-xs text-neutral-500 mt-1">
+                                {new Date(listing.soldAt).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
