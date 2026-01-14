@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button, Input } from '@/components/ui';
-import EventCard from '@/components/EventCard';
+import DiscoverEventCard from '@/components/DiscoverEventCard';
 import { useEventsSearch } from '@/lib/hooks/use-events';
 
 export default function DiscoverPage() {
@@ -97,17 +97,16 @@ export default function DiscoverPage() {
           {/* Events grid */}
           {events.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {events.map((event) => {
                   const isUpcoming = new Date(event.date) > new Date();
                   return (
-                    <EventCard
+                    <DiscoverEventCard
                       key={event.id}
                       event={event}
                       href={`/discover/${event.id}`}
                       badge={isUpcoming ? 'Upcoming' : undefined}
                       badgeVariant="info"
-                      showDescription
                     />
                   );
                 })}
