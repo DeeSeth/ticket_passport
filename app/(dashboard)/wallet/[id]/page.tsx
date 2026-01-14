@@ -39,23 +39,64 @@ export default function TicketDetailPage() {
   const isOwner = ticket.ownerId === user?.id;
   const hasGuarantee = user ? isEligibleForGuarantee(ticket, user) : false;
 
-  // Generate a simple QR code pattern (in production, use a real QR library)
+  // Generate a realistic QR code pattern
   const QRCode = ({ data }: { data: string }) => {
-    // Simple deterministic pattern based on data
     const hash = data.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const pattern = Array.from({ length: 25 }, (_, i) => (hash * (i + 1)) % 2 === 0);
+    const size = 25;
+
+    // Generate pattern with proper QR code structure
+    const getCell = (x: number, y: number): boolean => {
+      // Position detection patterns (finder patterns in corners)
+      const isTopLeftFinder = x < 7 && y < 7;
+      const isTopRightFinder = x >= size - 7 && y < 7;
+      const isBottomLeftFinder = x < 7 && y >= size - 7;
+
+      if (isTopLeftFinder || isTopRightFinder || isBottomLeftFinder) {
+        const localX = isTopRightFinder ? x - (size - 7) : x;
+        const localY = isBottomLeftFinder ? y - (size - 7) : y;
+        // Outer border
+        if (localX === 0 || localX === 6 || localY === 0 || localY === 6) return true;
+        // White ring
+        if (localX === 1 || localX === 5 || localY === 1 || localY === 5) return false;
+        // Inner square
+        if (localX >= 2 && localX <= 4 && localY >= 2 && localY <= 4) return true;
+        return false;
+      }
+
+      // Timing patterns
+      if (x === 6 && y > 7 && y < size - 7) return y % 2 === 0;
+      if (y === 6 && x > 7 && x < size - 7) return x % 2 === 0;
+
+      // Alignment pattern (center-ish)
+      const alignX = size - 7;
+      const alignY = size - 7;
+      if (x >= alignX - 2 && x <= alignX + 2 && y >= alignY - 2 && y <= alignY + 2) {
+        const localX = x - (alignX - 2);
+        const localY = y - (alignY - 2);
+        if (localX === 0 || localX === 4 || localY === 0 || localY === 4) return true;
+        if (localX === 2 && localY === 2) return true;
+        return false;
+      }
+
+      // Data area - deterministic pseudo-random based on position and hash
+      const seed = (hash + x * 31 + y * 17 + x * y) % 100;
+      return seed < 45;
+    };
 
     return (
-      <div className="inline-block p-4 bg-white rounded-lg">
-        <div className="grid grid-cols-5 gap-1 w-40 h-40">
-          {pattern.map((filled, i) => (
-            <div
-              key={i}
-              className={`aspect-square ${filled ? 'bg-neutral-900' : 'bg-white'}`}
-            />
-          ))}
+      <div className="inline-block p-4 bg-white rounded-lg shadow-lg">
+        <div className="w-44 h-44">
+          <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full">
+            {Array.from({ length: size * size }, (_, i) => {
+              const x = i % size;
+              const y = Math.floor(i / size);
+              return getCell(x, y) ? (
+                <rect key={i} x={x} y={y} width="1" height="1" fill="black" />
+              ) : null;
+            })}
+          </svg>
         </div>
-        <p className="text-xs text-neutral-500 text-center mt-2 font-mono">{data.slice(-12)}</p>
+        <p className="text-xs text-neutral-500 text-center mt-2 font-mono tracking-wider">{data.slice(-12)}</p>
       </div>
     );
   };

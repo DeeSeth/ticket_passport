@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 import { Badge } from './ui';
-import { Ticket, Event } from '@/lib/types';
+import { Ticket, Event, ResaleListing } from '@/lib/types';
 import { formatCurrency } from '@/lib/mock-data';
 
-interface TicketCardProps {
-  ticket: Ticket;
-  event: Event;
-  showResaleInfo?: boolean;
+interface ListingCardProps {
+  listing: ResaleListing & { ticket: Ticket; event: Event };
 }
 
 // Artist-specific accent colors
@@ -23,8 +21,8 @@ const artistColors: Record<string, { gradient: string; solid: string }> = {
 
 const defaultColor = { gradient: 'from-amber-500 to-orange-500', solid: 'bg-amber-500' };
 
-export default function TicketCard({ ticket, event, showResaleInfo = false }: TicketCardProps) {
-  const isPastEvent = new Date(event.date) < new Date();
+export default function ListingCard({ listing }: ListingCardProps) {
+  const { ticket, event } = listing;
   const colors = artistColors[event.artist] || defaultColor;
 
   const eventDate = new Date(event.date);
@@ -32,7 +30,7 @@ export default function TicketCard({ ticket, event, showResaleInfo = false }: Ti
   const dayNum = eventDate.getDate();
 
   return (
-    <Link href={`/wallet/${ticket.id}`}>
+    <Link href={`/marketplace/${listing.id}`}>
       <div className="group relative flex hover:scale-[1.01] transition-all duration-300 cursor-pointer h-32">
 
         {/* Left colored stub section */}
@@ -57,11 +55,9 @@ export default function TicketCard({ ticket, event, showResaleInfo = false }: Ti
             <div className="flex items-center gap-2 mb-0.5">
               <h3 className="font-bold text-white truncate">{event.artist}</h3>
               <div className="flex gap-1 flex-shrink-0">
-                {ticket.isCleared && (
-                  <Badge variant="cleared" size="sm">✓</Badge>
-                )}
-                {ticket.resaleStatus === 'listed' && (
-                  <Badge variant="warning" size="sm">For Sale</Badge>
+                <Badge variant="cleared" size="sm">✓</Badge>
+                {listing.isAuction && (
+                  <Badge variant="info" size="sm">Auction</Badge>
                 )}
               </div>
             </div>
@@ -71,26 +67,14 @@ export default function TicketCard({ ticket, event, showResaleInfo = false }: Ti
             </p>
           </div>
           <div className="text-right flex-shrink-0 ml-4">
-            {showResaleInfo && ticket.resalePrice ? (
-              <p className="text-lg font-bold text-amber-200">
-                {formatCurrency(ticket.resalePrice, ticket.currency)}
-              </p>
-            ) : (
-              <p className="text-lg font-bold text-white">
-                {formatCurrency(ticket.faceValue, ticket.currency)}
-              </p>
+            <p className="text-lg font-bold text-amber-200">
+              {formatCurrency(listing.isAuction ? (listing.currentHighestBid || listing.minimumBid || 0) : listing.askingPrice, ticket.currency)}
+            </p>
+            {listing.isAuction && (
+              <p className="text-xs text-neutral-500">current bid</p>
             )}
           </div>
         </div>
-
-        {/* Past event overlay */}
-        {isPastEvent && (
-          <div className="absolute inset-0 bg-black/70 rounded-xl flex items-center justify-center z-20">
-            <div className="bg-neutral-800 rounded-full px-4 py-1.5 border border-neutral-600">
-              <span className="text-neutral-300 font-semibold text-sm">PAST EVENT</span>
-            </div>
-          </div>
-        )}
       </div>
     </Link>
   );

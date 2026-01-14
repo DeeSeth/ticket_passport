@@ -12,6 +12,86 @@ import {
   formatCurrency,
   getMaxResalePrice,
 } from '@/lib/mock-data';
+import { Ticket, Event } from '@/lib/types';
+
+// Artist-specific accent colors
+const artistColors: Record<string, { gradient: string; solid: string }> = {
+  'Taylor Swift': { gradient: 'from-purple-600 to-pink-500', solid: 'bg-purple-600' },
+  'Beyoncé': { gradient: 'from-amber-500 to-orange-500', solid: 'bg-amber-500' },
+  'Coldplay': { gradient: 'from-cyan-500 to-blue-600', solid: 'bg-cyan-500' },
+  'Bad Bunny': { gradient: 'from-red-500 to-pink-600', solid: 'bg-red-500' },
+  'BLACKPINK': { gradient: 'from-pink-500 to-fuchsia-600', solid: 'bg-pink-500' },
+  'The Weeknd': { gradient: 'from-red-600 to-rose-700', solid: 'bg-red-600' },
+};
+
+const defaultColor = { gradient: 'from-amber-500 to-orange-500', solid: 'bg-amber-500' };
+
+// Ticket card component for sell page (raffle ticket style)
+function SellableTicketCard({
+  ticket,
+  event,
+  onClick,
+  selected = false,
+  showSellLabel = false
+}: {
+  ticket: Ticket;
+  event: Event;
+  onClick?: () => void;
+  selected?: boolean;
+  showSellLabel?: boolean;
+}) {
+  const colors = artistColors[event.artist] || defaultColor;
+  const eventDate = new Date(event.date);
+  const monthShort = eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const dayNum = eventDate.getDate();
+
+  return (
+    <div
+      className={`group relative flex hover:scale-[1.01] transition-all duration-300 cursor-pointer h-32 ${
+        selected ? 'ring-2 ring-amber-200 rounded-xl' : ''
+      }`}
+      onClick={onClick}
+    >
+      {/* Left colored stub section */}
+      <div className={`relative w-20 bg-gradient-to-br ${colors.gradient} rounded-l-xl flex flex-col justify-center items-center`}>
+        {/* Perforated edge */}
+        <div className="absolute right-0 top-0 bottom-0 flex flex-col justify-around py-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="w-2.5 h-2.5 bg-neutral-900 rounded-full translate-x-1" />
+          ))}
+        </div>
+
+        {/* Date */}
+        <div className="text-white text-center">
+          <p className="text-[10px] font-bold opacity-80">{monthShort}</p>
+          <p className="text-2xl font-black leading-none">{dayNum}</p>
+        </div>
+      </div>
+
+      {/* Main ticket section */}
+      <div className="flex-1 bg-neutral-700 border-y border-r border-neutral-600 rounded-r-xl px-4 flex items-center min-w-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <h3 className="font-bold text-white truncate">{event.artist}</h3>
+            {ticket.isCleared && <Badge variant="cleared" size="sm">✓</Badge>}
+          </div>
+          <p className="text-sm text-neutral-400 truncate">{event.name}</p>
+          <p className="text-xs text-neutral-500 mt-1">
+            {ticket.section} · Row {ticket.row} · Seat {ticket.seat}
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0 ml-4">
+          <p className="text-lg font-bold text-white">
+            {formatCurrency(ticket.faceValue, ticket.currency)}
+          </p>
+          {showSellLabel && (
+            <p className="text-xs text-amber-200">Tap to sell →</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type SellStep = 'select' | 'listing_type' | 'price' | 'auction_setup' | 'review' | 'success';
 type ListingType = 'fixed' | 'auction';
@@ -277,30 +357,15 @@ export default function SellPage() {
           <h2 className="text-lg font-semibold text-white">Select a ticket to sell</h2>
 
           {sellableTickets.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {sellableTickets.map(({ ticket, event }) => (
-                <div
+                <SellableTicketCard
                   key={ticket.id}
-                  className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50 cursor-pointer hover:border-amber-200/30 transition-colors"
+                  ticket={ticket}
+                  event={event}
                   onClick={() => handleSelectTicket(ticket.id)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-amber-300 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <span className="text-neutral-900 text-2xl font-bold">{event.artist.charAt(0)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-white">{event.artist}</h3>
-                      <p className="text-sm text-neutral-400">{event.name}</p>
-                      <p className="text-sm text-neutral-500">
-                        {ticket.section} • Row {ticket.row} • Seat {ticket.seat}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-neutral-500">Face value</p>
-                      <p className="font-semibold text-white">{formatCurrency(ticket.faceValue, ticket.currency)}</p>
-                    </div>
-                  </div>
-                </div>
+                  showSellLabel
+                />
               ))}
             </div>
           ) : (
@@ -398,21 +463,11 @@ export default function SellPage() {
           </button>
 
           {/* Selected ticket summary */}
-          <div className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-amber-300 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-neutral-900 text-2xl font-bold">{selectedTicket.event.artist.charAt(0)}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-white">{selectedTicket.event.artist}</h3>
-                <p className="text-sm text-neutral-400">{selectedTicket.event.name}</p>
-                <p className="text-sm text-neutral-500">
-                  {selectedTicket.ticket.section} • Row {selectedTicket.ticket.row} • Seat {selectedTicket.ticket.seat}
-                </p>
-              </div>
-              <Badge variant="cleared">Cleared</Badge>
-            </div>
-          </div>
+          <SellableTicketCard
+            ticket={selectedTicket.ticket}
+            event={selectedTicket.event}
+            selected
+          />
 
           {/* Resale rules */}
           <ResaleRulesDisplay
@@ -556,21 +611,11 @@ export default function SellPage() {
           </button>
 
           {/* Selected ticket summary */}
-          <div className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-amber-300 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-neutral-900 text-2xl font-bold">{selectedTicket.event.artist.charAt(0)}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-white">{selectedTicket.event.artist}</h3>
-                <p className="text-sm text-neutral-400">{selectedTicket.event.name}</p>
-                <p className="text-sm text-neutral-500">
-                  {selectedTicket.ticket.section} • Row {selectedTicket.ticket.row} • Seat {selectedTicket.ticket.seat}
-                </p>
-              </div>
-              <Badge variant="cleared">Cleared</Badge>
-            </div>
-          </div>
+          <SellableTicketCard
+            ticket={selectedTicket.ticket}
+            event={selectedTicket.event}
+            selected
+          />
 
           {/* Resale rules */}
           <ResaleRulesDisplay
