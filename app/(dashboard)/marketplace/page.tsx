@@ -3,6 +3,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Button, Badge, Input } from '@/components/ui';
+import EventCard from '@/components/EventCard';
+import ListingCard from '@/components/ListingCard';
+import { getActiveListings } from '@/lib/mock-data';
 import ResaleRulesDisplay from '@/components/ResaleRules';
 import { getActiveListings as getMockListings, formatCurrency, getMaxResalePrice, getEventById, getTicketById, getUserById } from '@/lib/mock-data';
 import { useEventsSearch } from '@/lib/hooks/use-events';
@@ -225,127 +228,11 @@ export default function MarketplacePage() {
               </Link>
             </div>
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {listings.slice(0, viewMode === 'all' ? 4 : undefined).map((listing) => {
-            const maxPrice = getMaxResalePrice(listing.ticket, listing.event);
-            const isPriceWithinCap = !listing.isAuction && listing.askingPrice <= maxPrice;
-            const savings = maxPrice - listing.askingPrice;
-
-            // Calculate time remaining for auction
-            const timeRemaining = listing.isAuction && listing.auctionEndsAt
-              ? Math.max(0, new Date(listing.auctionEndsAt).getTime() - new Date().getTime())
-              : 0;
-            const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
-            const daysRemaining = Math.floor(hoursRemaining / 24);
-
-            return (
-              <div key={listing.id} className="bg-neutral-700/50 rounded-xl border border-neutral-600/50 overflow-hidden hover:border-amber-200/30 transition-colors">
-                <div className="flex flex-col sm:flex-row">
-                  {/* Event image placeholder */}
-                  <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-neutral-700 to-neutral-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-amber-200/20 text-4xl font-bold">
-                      {listing.event.artist.charAt(0)}
-                    </span>
-                  </div>
-
-                  {/* Listing details */}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <h3 className="font-bold text-white">{listing.event.artist}</h3>
-                        <p className="text-sm text-neutral-400">{listing.event.name}</p>
-                      </div>
-                      <div className="flex flex-col gap-1 items-end">
-                        <Badge variant="cleared" size="sm">Cleared</Badge>
-                        {listing.isAuction && (
-                          <Badge variant="info" size="sm">Auction</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-neutral-500">
-                      {listing.event.venue}, {listing.event.city}
-                    </p>
-                    <p className="text-sm text-neutral-500 mb-3">
-                      {new Date(listing.event.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </p>
-
-                    <div className="flex items-center gap-2 text-sm text-neutral-400 mb-3">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                      </svg>
-                      {listing.ticket.section} • Row {listing.ticket.row} • Seat {listing.ticket.seat}
-                    </div>
-
-                    {/* Price section */}
-                    <div className="flex items-end justify-between">
-                      <div>
-                        {listing.isAuction ? (
-                          <>
-                            <p className="text-xs text-neutral-500">
-                              {listing.currentHighestBid ? 'Current bid' : 'Starting bid'}
-                            </p>
-                            <p className="text-xl font-bold text-amber-200">
-                              {formatCurrency(listing.currentHighestBid || listing.minimumBid || 0, listing.ticket.currency)}
-                            </p>
-                            {listing.totalBids && listing.totalBids > 0 && (
-                              <p className="text-xs text-blue-400">
-                                {listing.totalBids} {listing.totalBids === 1 ? 'bid' : 'bids'}
-                              </p>
-                            )}
-                            {timeRemaining > 0 && (
-                              <p className="text-xs text-neutral-500 mt-1">
-                                {daysRemaining > 0
-                                  ? `Ends in ${daysRemaining}d ${hoursRemaining % 24}h`
-                                  : `Ends in ${hoursRemaining}h`
-                                }
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-xs text-neutral-500">
-                              Face value: {formatCurrency(listing.ticket.faceValue, listing.ticket.currency)}
-                            </p>
-                            <p className="text-xl font-bold text-amber-200">
-                              {formatCurrency(listing.askingPrice, listing.ticket.currency)}
-                            </p>
-                            {isPriceWithinCap && savings > 0 && (
-                              <p className="text-xs text-emerald-400">
-                                {formatCurrency(savings, listing.ticket.currency)} below cap
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      <Link href={`/marketplace/${listing.id}`}>
-                        <Button size="sm" variant="gold">
-                          {listing.isAuction ? 'Place Bid' : 'View Details'}
-                        </Button>
-                      </Link>
-                    </div>
-
-                    {/* Resale rules summary */}
-                    <div className="mt-3 pt-3 border-t border-neutral-600/50">
-                      <ResaleRulesDisplay
-                        rules={listing.event.resaleRules}
-                        faceValue={listing.ticket.faceValue}
-                        currency={listing.ticket.currency}
-                        compact
-                        dark
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {listings.slice(0, viewMode === 'all' ? 4 : undefined).map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
         </>
       )}
 
@@ -369,65 +256,16 @@ export default function MarketplacePage() {
               <p className="text-neutral-400 mt-4">Loading events...</p>
             </div>
           ) : filteredEvents.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {filteredEvents.slice(0, viewMode === 'all' ? 4 : undefined).map((event) => {
-                const eventDate = new Date(event.date);
-                return (
-                  <Link
-                    key={event.id}
-                    href={`/discover/${event.id}`}
-                    className="bg-neutral-700/50 rounded-xl border border-neutral-600/50 overflow-hidden hover:border-amber-200/30 transition-colors"
-                  >
-                    <div className="flex flex-col sm:flex-row">
-                      {/* Event image */}
-                      {event.imageUrl ? (
-                        <div className="sm:w-48 h-32 sm:h-auto relative flex-shrink-0">
-                          <img
-                            src={event.imageUrl}
-                            alt={event.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-neutral-700 to-neutral-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-amber-200/20 text-4xl font-bold">
-                            {event.artist.charAt(0)}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Event details */}
-                      <div className="flex-1 p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div>
-                            <h3 className="font-bold text-white">{event.artist}</h3>
-                            <p className="text-sm text-neutral-400">{event.name}</p>
-                          </div>
-                          <Badge variant="info" size="sm">
-                            Event
-                          </Badge>
-                        </div>
-
-                        <p className="text-sm text-neutral-500">
-                          {event.venue}, {event.city}
-                        </p>
-                        <p className="text-sm text-neutral-500 mb-3">
-                          {eventDate.toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </p>
-
-                        <div className="mt-3 pt-3 border-t border-neutral-600/50">
-                          <p className="text-xs text-neutral-500">Powered by Ticketmaster</p>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {filteredEvents.slice(0, viewMode === 'all' ? 4 : undefined).map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  href={`/discover/${event.id}`}
+                  badge="Event"
+                  badgeVariant="info"
+                />
+              ))}
             </div>
           ) : (
             <div className="bg-neutral-700/50 rounded-xl p-8 border border-neutral-600/50 text-center">
