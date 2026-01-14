@@ -1,16 +1,29 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { Button, Badge, Input } from '@/components/ui';
 import ResaleRulesDisplay from '@/components/ResaleRules';
-import { getActiveListings, formatCurrency, getMaxResalePrice } from '@/lib/mock-data';
+import { getActiveListings as getMockListings, formatCurrency, getMaxResalePrice, getEventById, getTicketById, getUserById } from '@/lib/mock-data';
 import { useEventsSearch } from '@/lib/hooks/use-events';
+import { getActiveListings as getUserListings, StoredListing } from '@/lib/listing-store';
+import { useAuth } from '@/lib/auth-context';
+
+// Common display format for listings (supports both mock and user-created)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type DisplayListing = any;
 
 export default function MarketplacePage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'price_low' | 'price_high'>('date');
   const [viewMode, setViewMode] = useState<'all' | 'resale' | 'events'>('all');
+  const [userListings, setUserListings] = useState<StoredListing[]>([]);
+
+  // Load user listings from localStorage
+  useEffect(() => {
+    setUserListings(getUserListings());
+  }, []);
 
   // Fetch Ticketmaster events
   const { events, loading: eventsLoading } = useEventsSearch({
@@ -20,7 +33,52 @@ export default function MarketplacePage() {
   });
 
   const listings = useMemo(() => {
-    let results = getActiveListings();
+    // Get mock listings
+    const mockListings = getMockListings();
+
+    // Transform user listings to match display format
+    const transformedUserListings: DisplayListing[] = userListings
+      .filter(ul => ul.sellerId !== user?.id) // Don't show your own listings
+      .map(ul => ({
+        id: ul.id,
+        askingPrice: ul.askingPrice,
+        isAuction: ul.listingType === 'auction',
+        minimumBid: ul.minimumBid,
+        currentHighestBid: ul.currentHighestBid,
+        reservePrice: ul.reservePrice,
+        auctionEndsAt: ul.auctionEndsAt ? new Date(ul.auctionEndsAt) : undefined,
+        totalBids: ul.totalBids,
+        ticket: {
+          id: ul.ticketId,
+          section: ul.section,
+          row: ul.row,
+          seat: ul.seat,
+          faceValue: ul.faceValue,
+          currency: ul.currency,
+        },
+        event: {
+          id: ul.eventId,
+          artist: ul.eventArtist,
+          name: ul.eventName,
+          venue: ul.eventVenue,
+          city: ul.eventCity,
+          country: ul.eventCountry,
+          date: ul.eventDate,
+          resaleRules: {
+            priceCap: { type: 'percentage', value: 120 }, // Default rules
+            charityPercentage: 10,
+            artistShare: 5,
+          },
+        },
+        seller: {
+          id: ul.sellerId,
+          name: ul.sellerName,
+        },
+        isUserListing: true,
+      }));
+
+    // Combine mock and user listings
+    let results: DisplayListing[] = [...mockListings, ...transformedUserListings];
 
     // Filter by search query
     if (searchQuery) {
@@ -37,10 +95,18 @@ export default function MarketplacePage() {
     // Sort
     switch (sortBy) {
       case 'price_low':
-        results.sort((a, b) => a.askingPrice - b.askingPrice);
+        results.sort((a, b) => {
+          const priceA = a.isAuction ? (a.currentHighestBid || a.minimumBid || 0) : a.askingPrice;
+          const priceB = b.isAuction ? (b.currentHighestBid || b.minimumBid || 0) : b.askingPrice;
+          return priceA - priceB;
+        });
         break;
       case 'price_high':
-        results.sort((a, b) => b.askingPrice - a.askingPrice);
+        results.sort((a, b) => {
+          const priceA = a.isAuction ? (a.currentHighestBid || a.minimumBid || 0) : a.askingPrice;
+          const priceB = b.isAuction ? (b.currentHighestBid || b.minimumBid || 0) : b.askingPrice;
+          return priceB - priceA;
+        });
         break;
       case 'date':
       default:
@@ -49,7 +115,7 @@ export default function MarketplacePage() {
     }
 
     return results;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, userListings, user?.id]);
 
   // Filter events by search query
   const filteredEvents = useMemo(() => {

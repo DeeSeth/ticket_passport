@@ -9,6 +9,7 @@ import AuctionCountdown from '@/components/AuctionCountdown';
 import { mockTickets, getEventById, getTicketById, formatCurrency } from '@/lib/mock-data';
 import { getUserPurchases } from '@/lib/purchase-store';
 import { getActiveBids, getUnreadNotifications, StoredBid, OutbidNotification } from '@/lib/bid-store';
+import { getActiveSellerListings, StoredListing } from '@/lib/listing-store';
 
 type FilterType = 'all' | 'upcoming' | 'past';
 
@@ -17,12 +18,14 @@ export default function WalletPage() {
   const [filter, setFilter] = useState<FilterType>('upcoming');
   const [activeBids, setActiveBids] = useState<StoredBid[]>([]);
   const [notifications, setNotifications] = useState<OutbidNotification[]>([]);
+  const [activeListings, setActiveListings] = useState<StoredListing[]>([]);
 
-  // Load active bids
+  // Load active bids and listings
   useEffect(() => {
     if (user) {
       setActiveBids(getActiveBids(user.id));
       setNotifications(getUnreadNotifications(user.id));
+      setActiveListings(getActiveSellerListings(user.id));
     }
   }, [user]);
 
@@ -99,6 +102,16 @@ export default function WalletPage() {
           <p className="text-neutral-400">Manage your concert tickets</p>
         </div>
         <div className="flex gap-3">
+          <Link href="/wallet/listings">
+            <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700 relative">
+              My Listings
+              {activeListings.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full text-xs font-bold text-white flex items-center justify-center">
+                  {activeListings.length}
+                </span>
+              )}
+            </Button>
+          </Link>
           <Link href="/wallet/bids">
             <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700 relative">
               My Bids
@@ -114,6 +127,63 @@ export default function WalletPage() {
           </Link>
         </div>
       </div>
+
+      {/* Active Listings Banner */}
+      {activeListings.length > 0 && (
+        <div className="bg-emerald-900/30 rounded-xl p-4 border border-emerald-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-emerald-300">
+                  {activeListings.length} Active Listing{activeListings.length > 1 ? 's' : ''}
+                </h3>
+                <p className="text-sm text-emerald-400/80 mt-1">
+                  {activeListings.filter(l => l.listingType === 'auction').length > 0
+                    ? `You have ${activeListings.filter(l => l.listingType === 'auction').length} auction${activeListings.filter(l => l.listingType === 'auction').length > 1 ? 's' : ''} in progress.`
+                    : 'Your tickets are listed on the marketplace.'}
+                </p>
+              </div>
+            </div>
+            <Link href="/wallet/listings">
+              <Button size="sm" variant="outline" className="border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/30">
+                Manage Listings
+              </Button>
+            </Link>
+          </div>
+
+          {/* Quick preview of active listings */}
+          {activeListings.slice(0, 2).map((listing) => (
+            <div
+              key={listing.id}
+              className="mt-4 pt-4 border-t border-emerald-700/30 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-900/50 rounded-lg flex items-center justify-center">
+                  <span className="text-emerald-300 font-bold">{listing.eventArtist.charAt(0)}</span>
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">{listing.eventArtist}</p>
+                  <p className="text-emerald-400/70 text-xs">
+                    {listing.listingType === 'auction'
+                      ? `Starting at ${formatCurrency(listing.minimumBid || 0, listing.currency)}`
+                      : `Listed at ${formatCurrency(listing.askingPrice, listing.currency)}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <Badge variant={listing.listingType === 'auction' ? 'info' : 'success'} size="sm">
+                  {listing.listingType === 'auction' ? 'Auction' : 'Fixed Price'}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Active Bids Banner */}
       {activeBids.length > 0 && (

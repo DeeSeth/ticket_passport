@@ -9,13 +9,14 @@ import PassportScore from '@/components/PassportScore';
 import ResaleRulesDisplay from '@/components/ResaleRules';
 import AuctionCountdown from '@/components/AuctionCountdown';
 import {
-  getListingById,
+  getListingById as getMockListingById,
   getTicketById,
   getEventById,
   getUserById,
   formatCurrency,
   formatEventDate,
   getMaxResalePrice,
+  mockUsers,
 } from '@/lib/mock-data';
 import { addPurchase } from '@/lib/purchase-store';
 import {
@@ -25,6 +26,11 @@ import {
   generateBidId,
   StoredBid,
 } from '@/lib/bid-store';
+import {
+  getListingById as getUserListingById,
+  StoredListing,
+  markListingSold,
+} from '@/lib/listing-store';
 
 type PurchaseStep = 'details' | 'confirm' | 'processing' | 'success';
 
@@ -44,15 +50,82 @@ export default function MarketplaceDetailPage() {
   const [auctionEnded, setAuctionEnded] = useState(false);
 
   const listingData = useMemo(() => {
-    const listing = getListingById(listingId);
-    if (!listing) return null;
-    const ticket = getTicketById(listing.ticketId);
-    if (!ticket) return null;
-    const event = getEventById(ticket.eventId);
-    if (!event) return null;
-    const seller = getUserById(listing.sellerId);
-    if (!seller) return null;
-    return { listing, ticket, event, seller };
+    // First try mock listings
+    const mockListing = getMockListingById(listingId);
+    if (mockListing) {
+      const ticket = getTicketById(mockListing.ticketId);
+      if (!ticket) return null;
+      const event = getEventById(ticket.eventId);
+      if (!event) return null;
+      const seller = getUserById(mockListing.sellerId);
+      if (!seller) return null;
+      return { listing: mockListing, ticket, event, seller, isUserListing: false };
+    }
+
+    // Then try user-created listings from localStorage
+    const userListing = getUserListingById(listingId);
+    if (userListing) {
+      // Transform user listing to match expected format
+      const transformedListing = {
+        id: userListing.id,
+        ticketId: userListing.ticketId,
+        sellerId: userListing.sellerId,
+        askingPrice: userListing.askingPrice,
+        isAuction: userListing.listingType === 'auction',
+        minimumBid: userListing.minimumBid,
+        reservePrice: userListing.reservePrice,
+        auctionEndsAt: userListing.auctionEndsAt ? new Date(userListing.auctionEndsAt) : undefined,
+        currentHighestBid: userListing.currentHighestBid,
+        totalBids: userListing.totalBids,
+        status: userListing.status,
+        listedAt: new Date(userListing.listedAt),
+      };
+      const ticket = {
+        id: userListing.ticketId,
+        eventId: userListing.eventId,
+        ownerId: userListing.sellerId,
+        section: userListing.section,
+        row: userListing.row,
+        seat: userListing.seat,
+        faceValue: userListing.faceValue,
+        currency: userListing.currency,
+        isCleared: true,
+        resaleStatus: 'listed' as const,
+        barcode: `PASSPORT-${userListing.ticketId}`,
+        purchasedAt: new Date(),
+        originalOwnerId: userListing.sellerId,
+        transferHistory: [] as { id: string; fromUserId: string; toUserId: string; price: number; transferredAt: Date; method: 'resale' | 'gift' | 'original_purchase' }[],
+      };
+      const event = {
+        id: userListing.eventId,
+        artist: userListing.eventArtist,
+        name: userListing.eventName,
+        date: userListing.eventDate,
+        venue: userListing.eventVenue,
+        city: userListing.eventCity,
+        country: userListing.eventCountry,
+        resaleRules: {
+          maxPriceMultiplier: 1.5,
+          fanOnlyWindowHours: 48,
+          transferDeadlineHours: 24,
+          requiresIdMatch: true,
+          charityPercentage: 10,
+        },
+      };
+      // Try to find seller in mock users, or create placeholder
+      const seller = getUserById(userListing.sellerId) || {
+        id: userListing.sellerId,
+        name: userListing.sellerName,
+        email: '',
+        passportScore: 85,
+        isVerified: true,
+        membershipStatus: 'active' as const,
+        createdAt: new Date(),
+      };
+      return { listing: transformedListing, ticket, event, seller, isUserListing: true };
+    }
+
+    return null;
   }, [listingId]);
 
   // Load user's existing bid and bid history
