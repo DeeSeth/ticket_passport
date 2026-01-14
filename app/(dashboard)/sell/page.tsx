@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -13,6 +13,12 @@ import {
   getMaxResalePrice,
 } from '@/lib/mock-data';
 import { Ticket, Event } from '@/lib/types';
+import {
+  createListing,
+  generateListingId,
+  getAllListings,
+  StoredListing,
+} from '@/lib/listing-store';
 
 // Artist-specific accent colors
 const artistColors: Record<string, { gradient: string; solid: string }> = {
@@ -113,13 +119,31 @@ export default function SellPage() {
   const [auctionDuration, setAuctionDuration] = useState<string>('24'); // hours
   const [auctionError, setAuctionError] = useState<string>('');
 
-  // Get user's sellable tickets
+  // Listing state
+  const [existingListings, setExistingListings] = useState<StoredListing[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdListingId, setCreatedListingId] = useState<string | null>(null);
+
+  // Load existing listings from localStorage on mount
+  useEffect(() => {
+    setExistingListings(getAllListings());
+  }, []);
+
+  // Get user's sellable tickets (excluding already listed in localStorage)
   const sellableTickets = useMemo(() => {
+    // Get ticket IDs that are already listed
+    const listedTicketIds = new Set(
+      existingListings
+        .filter(l => l.status === 'active')
+        .map(l => l.ticketId)
+    );
+
     return mockTickets
       .filter(
         (ticket) =>
           ticket.ownerId === user?.id &&
           ticket.resaleStatus === 'not_listed' &&
+          !listedTicketIds.has(ticket.id) &&
           new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
       )
       .map((ticket) => ({
@@ -127,7 +151,7 @@ export default function SellPage() {
         event: getEventById(ticket.eventId)!,
       }))
       .filter(({ event }) => event !== undefined);
-  }, [user?.id]);
+  }, [user?.id, existingListings]);
 
   const selectedTicket = useMemo(() => {
     if (!selectedTicketId) return null;
@@ -219,9 +243,65 @@ export default function SellPage() {
   };
 
   const handleListTicket = async () => {
-    // Simulate listing process
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setStep('success');
+    if (!selectedTicket || !user) return;
+
+    setIsSubmitting(true);
+
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Create the listing object
+    const newListingId = generateListingId();
+    const newListing: StoredListing = {
+      id: newListingId,
+      ticketId: selectedTicket.ticket.id,
+      eventId: selectedTicket.event.id,
+      sellerId: user.id,
+      sellerName: user.name,
+      // Event details
+      eventArtist: selectedTicket.event.artist,
+      eventName: selectedTicket.event.name,
+      eventDate: selectedTicket.event.date,
+      eventVenue: selectedTicket.event.venue,
+      eventCity: selectedTicket.event.city,
+      eventCountry: selectedTicket.event.country,
+      // Ticket details
+      section: selectedTicket.ticket.section,
+      row: selectedTicket.ticket.row,
+      seat: selectedTicket.ticket.seat,
+      faceValue: selectedTicket.ticket.faceValue,
+      currency: selectedTicket.ticket.currency,
+      // Listing details
+      listingType,
+      askingPrice: listingType === 'fixed' ? parseFloat(askingPrice) : 0,
+      // Auction fields (if auction)
+      ...(listingType === 'auction' && {
+        minimumBid: parseFloat(minimumBid),
+        reservePrice: reservePrice ? parseFloat(reservePrice) : undefined,
+        auctionEndsAt: auctionEndDate.toISOString(),
+        currentHighestBid: 0,
+        totalBids: 0,
+      }),
+      // Status
+      status: 'active',
+      listedAt: new Date().toISOString(),
+    };
+
+    // Save to localStorage
+    const result = createListing(newListing);
+
+    if (result.success) {
+      setCreatedListingId(newListingId);
+      // Update local state to reflect the new listing
+      setExistingListings(getAllListings());
+      setStep('success');
+    } else {
+      // Handle error - show error message
+      console.error('Failed to create listing:', result.error);
+      setAuctionError(result.error || 'Failed to create listing. Please try again.');
+    }
+
+    setIsSubmitting(false);
   };
 
   // Calculate fees (for fixed price listing or estimated for auction)
@@ -302,8 +382,8 @@ export default function SellPage() {
           <Link href="/wallet">
             <Button variant="gold">View My Tickets</Button>
           </Link>
-          <Link href="/marketplace">
-            <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">Browse Marketplace</Button>
+          <Link href="/wallet/listings">
+            <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">View My Listings</Button>
           </Link>
         </div>
       </div>
@@ -776,8 +856,18 @@ export default function SellPage() {
               </p>
             </div>
 
-            <Button onClick={handleListTicket} variant="gold" className="w-full" size="lg">
-              {listingType === 'auction' ? 'Start Auction' : 'List Ticket for Sale'}
+            <Button
+              onClick={handleListTicket}
+              variant="gold"
+              className="w-full"
+              size="lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? 'Creating Listing...'
+                : listingType === 'auction'
+                  ? 'Start Auction'
+                  : 'List Ticket for Sale'}
             </Button>
           </div>
         </div>
