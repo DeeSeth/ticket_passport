@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { Button, Badge, Input } from '@/components/ui';
+import { Button, Input } from '@/components/ui';
+import EventCard from '@/components/EventCard';
 import { useEventsSearch } from '@/lib/hooks/use-events';
 
 export default function DiscoverPage() {
@@ -97,71 +97,18 @@ export default function DiscoverPage() {
           {/* Events grid */}
           {events.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {events.map((event) => {
-                  const eventDate = new Date(event.date);
-                  const isUpcoming = eventDate > new Date();
-
+                  const isUpcoming = new Date(event.date) > new Date();
                   return (
-                    <Link
+                    <EventCard
                       key={event.id}
+                      event={event}
                       href={`/discover/${event.id}`}
-                      className="bg-neutral-700/50 rounded-xl border border-neutral-600/50 overflow-hidden hover:border-amber-200/30 transition-colors"
-                    >
-                      <div className="flex flex-col sm:flex-row">
-                        {/* Event image */}
-                        {event.imageUrl ? (
-                          <div className="sm:w-48 h-32 sm:h-auto relative flex-shrink-0">
-                            <img
-                              src={event.imageUrl}
-                              alt={event.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-neutral-700 to-neutral-600 flex items-center justify-center flex-shrink-0">
-                            <span className="text-amber-200/20 text-4xl font-bold">
-                              {event.artist.charAt(0)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Event details */}
-                        <div className="flex-1 p-4">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <div>
-                              <h3 className="font-bold text-white">{event.artist}</h3>
-                              <p className="text-sm text-neutral-400">{event.name}</p>
-                            </div>
-                            {isUpcoming && (
-                              <Badge variant="info" size="sm">
-                                Upcoming
-                              </Badge>
-                            )}
-                          </div>
-
-                          <p className="text-sm text-neutral-500">
-                            {event.venue}, {event.city}
-                          </p>
-                          <p className="text-sm text-neutral-500 mb-3">
-                            {eventDate.toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                            })}
-                          </p>
-
-                          {event.description && (
-                            <p className="text-sm text-neutral-400 line-clamp-2">
-                              {event.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
+                      badge={isUpcoming ? 'Upcoming' : undefined}
+                      badgeVariant="info"
+                      showDescription
+                    />
                   );
                 })}
               </div>
