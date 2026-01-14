@@ -16,6 +16,7 @@ import {
   formatEventDate,
   getMaxResalePrice,
 } from '@/lib/mock-data';
+import { addPurchase } from '@/lib/purchase-store';
 
 type PurchaseStep = 'details' | 'confirm' | 'processing' | 'success';
 
@@ -57,9 +58,23 @@ export default function MarketplaceDetailPage() {
   const total = listing.askingPrice + platformFee;
 
   const handlePurchase = async () => {
+    if (!user) return;
+
     setStep('processing');
     // Simulate payment processing
     await new Promise((resolve) => setTimeout(resolve, 2500));
+
+    // Save purchase to localStorage
+    addPurchase({
+      ticketId: ticket.id,
+      listingId: listing.id,
+      eventId: event.id,
+      buyerId: user.id,
+      purchasedAt: new Date().toISOString(),
+      amount: total,
+      currency: ticket.currency,
+    });
+
     setStep('success');
   };
 

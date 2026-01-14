@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui';
 import TicketCard from '@/components/TicketCard';
-import { mockTickets, getEventById } from '@/lib/mock-data';
+import { mockTickets, getEventById, getTicketById } from '@/lib/mock-data';
+import { getUserPurchases } from '@/lib/purchase-store';
 
 type FilterType = 'all' | 'upcoming' | 'past';
 
@@ -13,16 +14,44 @@ export default function WalletPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<FilterType>('upcoming');
 
-  // Get user's tickets with event data
+  // Get user's tickets with event data (including purchased tickets)
   const userTickets = useMemo(() => {
-    return mockTickets
-      .filter(ticket => ticket.ownerId === user?.id)
+    if (!user) return [];
+
+    // Get tickets owned by user (from mock data)
+    const ownedTickets = mockTickets
+      .filter(ticket => ticket.ownerId === user.id)
       .map(ticket => ({
         ticket,
         event: getEventById(ticket.eventId)!,
+        isPurchased: false,
       }))
       .filter(({ event }) => event !== undefined);
-  }, [user?.id]);
+
+    // Get tickets purchased by user (from localStorage)
+    const purchases = getUserPurchases(user.id);
+    const purchasedTickets = purchases
+      .map(purchase => {
+        const ticket = getTicketById(purchase.ticketId);
+        if (!ticket) return null;
+        const event = getEventById(purchase.eventId);
+        if (!event) return null;
+        return {
+          ticket,
+          event,
+          isPurchased: true,
+        };
+      })
+      .filter((item): item is { ticket: any; event: any; isPurchased: boolean } => item !== null);
+
+    // Combine and deduplicate (in case a ticket appears in both lists)
+    const allTickets = [...ownedTickets, ...purchasedTickets];
+    const uniqueTickets = allTickets.filter(
+      (item, index, self) => self.findIndex(t => t.ticket.id === item.ticket.id) === index
+    );
+
+    return uniqueTickets;
+  }, [user]);
 
   // Filter tickets
   const filteredTickets = useMemo(() => {
