@@ -370,9 +370,9 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-neutral-400">
-                <li><a href="#" className="hover:text-amber-200 transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-amber-200 transition-colors">For Artists</a></li>
-                <li><a href="#" className="hover:text-amber-200 transition-colors">For Venues</a></li>
+                <li><Link href="/about" className="hover:text-amber-200 transition-colors">About</Link></li>
+                <li><Link href="/for-artists" className="hover:text-amber-200 transition-colors">For Artists</Link></li>
+                <li><Link href="/for-venues" className="hover:text-amber-200 transition-colors">For Venues</Link></li>
               </ul>
             </div>
             <div>
