@@ -19,8 +19,8 @@ export interface Event {
   venue: string;
   city: string;
   country: string;
-  date: Date;
-  imageUrl: string;
+  date: string; // ISO 8601 date string for API compatibility
+  imageUrl?: string;
   description?: string;
   resaleRules: ResaleRules;
 }

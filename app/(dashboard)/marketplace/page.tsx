@@ -5,10 +5,19 @@ import Link from 'next/link';
 import { Button, Badge, Input } from '@/components/ui';
 import ResaleRulesDisplay from '@/components/ResaleRules';
 import { getActiveListings, formatCurrency, getMaxResalePrice } from '@/lib/mock-data';
+import { useEventsSearch } from '@/lib/hooks/use-events';
 
 export default function MarketplacePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'price_low' | 'price_high'>('date');
+  const [viewMode, setViewMode] = useState<'all' | 'resale' | 'events'>('all');
+
+  // Fetch Ticketmaster events
+  const { events, loading: eventsLoading } = useEventsSearch({
+    keyword: searchQuery || undefined,
+    size: 10,
+    sort: 'date,asc',
+  });
 
   const listings = useMemo(() => {
     let results = getActiveListings();
@@ -42,6 +51,19 @@ export default function MarketplacePage() {
     return results;
   }, [searchQuery, sortBy]);
 
+  // Filter events by search query
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery) return events;
+    const query = searchQuery.toLowerCase();
+    return events.filter(
+      (event) =>
+        event.artist.toLowerCase().includes(query) ||
+        event.name.toLowerCase().includes(query) ||
+        event.venue.toLowerCase().includes(query) ||
+        event.city.toLowerCase().includes(query)
+    );
+  }, [events, searchQuery]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,6 +89,40 @@ export default function MarketplacePage() {
         </div>
       </div>
 
+      {/* View mode tabs */}
+      <div className="flex gap-2 border-b border-neutral-700">
+        <button
+          onClick={() => setViewMode('all')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            viewMode === 'all'
+              ? 'border-amber-200 text-amber-200'
+              : 'border-transparent text-neutral-400 hover:text-white'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setViewMode('resale')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            viewMode === 'resale'
+              ? 'border-amber-200 text-amber-200'
+              : 'border-transparent text-neutral-400 hover:text-white'
+          }`}
+        >
+          Resale Tickets ({listings.length})
+        </button>
+        <button
+          onClick={() => setViewMode('events')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            viewMode === 'events'
+              ? 'border-amber-200 text-amber-200'
+              : 'border-transparent text-neutral-400 hover:text-white'
+          }`}
+        >
+          Upcoming Events ({filteredEvents.length})
+        </button>
+      </div>
+
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -77,21 +133,34 @@ export default function MarketplacePage() {
             dark
           />
         </div>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-          className="px-4 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-        >
-          <option value="date">Sort by Date</option>
-          <option value="price_low">Price: Low to High</option>
-          <option value="price_high">Price: High to Low</option>
-        </select>
+        {viewMode !== 'events' && (
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="px-4 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="date">Sort by Date</option>
+            <option value="price_low">Price: Low to High</option>
+            <option value="price_high">Price: High to Low</option>
+          </select>
+        )}
       </div>
 
-      {/* Listings */}
-      {listings.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {listings.map((listing) => {
+      {/* Resale Listings Section */}
+      {(viewMode === 'all' || viewMode === 'resale') && listings.length > 0 && (
+        <>
+          {viewMode === 'all' && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Resale Tickets</h2>
+              <Link href="/marketplace?view=resale">
+                <Button variant="outline" size="sm" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {listings.slice(0, viewMode === 'all' ? 4 : undefined).map((listing) => {
             const maxPrice = getMaxResalePrice(listing.ticket, listing.event);
             const isPriceWithinCap = listing.askingPrice <= maxPrice;
             const savings = maxPrice - listing.askingPrice;
@@ -171,18 +240,120 @@ export default function MarketplacePage() {
             );
           })}
         </div>
-      ) : (
+        </>
+      )}
+
+      {/* Ticketmaster Events Section */}
+      {(viewMode === 'all' || viewMode === 'events') && (
+        <>
+          {viewMode === 'all' && (
+            <div className="flex items-center justify-between mt-8">
+              <h2 className="text-xl font-bold text-white">Upcoming Events</h2>
+              <Link href="/discover">
+                <Button variant="outline" size="sm" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {eventsLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-neutral-700 border-t-amber-200"></div>
+              <p className="text-neutral-400 mt-4">Loading events...</p>
+            </div>
+          ) : filteredEvents.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredEvents.slice(0, viewMode === 'all' ? 4 : undefined).map((event) => {
+                const eventDate = new Date(event.date);
+                return (
+                  <Link
+                    key={event.id}
+                    href={`/discover/${event.id}`}
+                    className="bg-neutral-700/50 rounded-xl border border-neutral-600/50 overflow-hidden hover:border-amber-200/30 transition-colors"
+                  >
+                    <div className="flex flex-col sm:flex-row">
+                      {/* Event image */}
+                      {event.imageUrl ? (
+                        <div className="sm:w-48 h-32 sm:h-auto relative flex-shrink-0">
+                          <img
+                            src={event.imageUrl}
+                            alt={event.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-neutral-700 to-neutral-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-amber-200/20 text-4xl font-bold">
+                            {event.artist.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Event details */}
+                      <div className="flex-1 p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <h3 className="font-bold text-white">{event.artist}</h3>
+                            <p className="text-sm text-neutral-400">{event.name}</p>
+                          </div>
+                          <Badge variant="info" size="sm">
+                            Event
+                          </Badge>
+                        </div>
+
+                        <p className="text-sm text-neutral-500">
+                          {event.venue}, {event.city}
+                        </p>
+                        <p className="text-sm text-neutral-500 mb-3">
+                          {eventDate.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </p>
+
+                        <div className="mt-3 pt-3 border-t border-neutral-600/50">
+                          <p className="text-xs text-neutral-500">Powered by Ticketmaster</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-neutral-700/50 rounded-xl p-8 border border-neutral-600/50 text-center">
+              <div className="w-16 h-16 bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-white mb-1">No events found</h3>
+              <p className="text-neutral-400">
+                {searchQuery
+                  ? `No events found for "${searchQuery}". Try a different search.`
+                  : 'No upcoming events available at this time.'}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Empty state when both are empty */}
+      {viewMode === 'resale' && listings.length === 0 && (
         <div className="bg-neutral-700/50 rounded-xl p-8 border border-neutral-600/50 text-center">
           <div className="w-16 h-16 bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="font-semibold text-white mb-1">No tickets found</h3>
+          <h3 className="font-semibold text-white mb-1">No resale tickets found</h3>
           <p className="text-neutral-400">
             {searchQuery
-              ? `No results for "${searchQuery}". Try a different search.`
-              : 'No tickets are currently available on the marketplace.'}
+              ? `No resale tickets found for "${searchQuery}". Try a different search.`
+              : 'No tickets are currently available for resale on the marketplace.'}
           </p>
         </div>
       )}
