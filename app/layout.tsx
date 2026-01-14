@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Ticket PASSPORT - The Global Standard for Concert Entry",
+  title: "T-PASSPORT - The Global Standard for Concert Entry",
   description: "Safe resale. Verified identity. Entry guaranteed.",
 };
 

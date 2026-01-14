@@ -153,9 +153,9 @@ export default function MarketplacePage() {
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold text-amber-200">PASSPORT Protected</h3>
+            <h3 className="font-semibold text-amber-200">T-PASSPORT Protected</h3>
             <p className="text-sm text-neutral-400 mt-1">
-              All tickets on this marketplace are cleared by PASSPORT. Your purchase is protected by our Entry Guarantee.
+              All tickets on this marketplace are cleared by T-PASSPORT. Your purchase is protected by our Entry Guarantee.
             </p>
           </div>
         </div>

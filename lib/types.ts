@@ -45,7 +45,7 @@ export interface Ticket {
   seat: string;
   faceValue: number;
   currency: string;
-  isCleared: boolean; // Verified by PASSPORT
+  isCleared: boolean; // Verified by T-PASSPORT
   resaleStatus: 'not_listed' | 'listed' | 'in_auction' | 'pending_transfer' | 'sold';
   resalePrice?: number;
   barcode: string;

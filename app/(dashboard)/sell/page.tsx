@@ -408,7 +408,7 @@ export default function SellPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-white">Sell a Ticket</h1>
-        <p className="text-neutral-400">List your ticket on the PASSPORT marketplace</p>
+        <p className="text-neutral-400">List your ticket on the T-PASSPORT marketplace</p>
       </div>
 
       {/* Progress steps */}

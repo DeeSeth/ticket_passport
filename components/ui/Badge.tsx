@@ -18,7 +18,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       danger: 'bg-red-100 text-red-800',
       error: 'bg-red-100 text-red-800',
       info: 'bg-blue-100 text-blue-800',
-      cleared: 'bg-emerald-500 text-white', // Special "Cleared by PASSPORT" badge
+      cleared: 'bg-emerald-500 text-white', // Special "Cleared by T-PASSPORT" badge
     };
 
     const sizes = {

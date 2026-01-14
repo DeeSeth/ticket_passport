@@ -11,7 +11,7 @@ export default function AboutPage() {
               <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                 <span className="text-amber-200 font-bold text-xl">P</span>
               </div>
-              <span className="font-medium text-white text-lg tracking-wide">PASSPORT</span>
+              <span className="font-medium text-white text-lg tracking-wide">T-PASSPORT</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/login" className="text-neutral-300 hover:text-white font-medium transition-colors">
@@ -33,7 +33,7 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              About <span className="text-amber-200">PASSPORT</span>
+              About <span className="text-amber-200">T-PASSPORT</span>
             </h1>
             <p className="text-xl text-neutral-400 leading-relaxed">
               We&apos;re on a mission to eliminate ticket fraud and make concert resale fair for everyone—fans, artists, and venues alike.
@@ -55,13 +55,13 @@ export default function AboutPage() {
               </h2>
               <div className="space-y-4 text-neutral-400 leading-relaxed">
                 <p>
-                  PASSPORT was founded in 2024 after our founders experienced the frustration of buying fake concert tickets firsthand. After being turned away at the gate for a sold-out show they&apos;d been anticipating for months, they knew there had to be a better way.
+                  T-PASSPORT was founded in 2024 after our founders experienced the frustration of buying fake concert tickets firsthand. After being turned away at the gate for a sold-out show they&apos;d been anticipating for months, they knew there had to be a better way.
                 </p>
                 <p>
                   Traditional ticket marketplaces couldn&apos;t guarantee entry. Scalpers ran rampant. Artists had no control over their own tickets. The system was broken.
                 </p>
                 <p>
-                  So we built PASSPORT—a platform where every ticket is verified, every seller is accountable, and every buyer is protected by our Entry Guarantee.
+                  So we built T-PASSPORT—a platform where every ticket is verified, every seller is accountable, and every buyer is protected by our Entry Guarantee.
                 </p>
               </div>
             </div>
@@ -222,7 +222,7 @@ export default function AboutPage() {
             Join the <span className="text-amber-200">Movement</span>
           </h2>
           <p className="text-xl text-neutral-400 mb-10 max-w-2xl mx-auto">
-            Whether you&apos;re a fan, artist, or venue—there&apos;s a place for you in the PASSPORT community.
+            Whether you&apos;re a fan, artist, or venue—there&apos;s a place for you in the T-PASSPORT community.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -250,7 +250,7 @@ export default function AboutPage() {
                 <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                   <span className="text-amber-200 font-bold text-xl">P</span>
                 </div>
-                <span className="font-medium text-white text-lg">PASSPORT</span>
+                <span className="font-medium text-white text-lg">T-PASSPORT</span>
               </div>
               <p className="text-neutral-500 text-sm">
                 The global standard for concert entry and safe resale.
@@ -282,7 +282,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-neutral-800 text-center text-neutral-500 text-sm">
-            <p>&copy; 2026 Ticket PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
+            <p>&copy; 2026 Ticket T-PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
           </div>
         </div>
       </footer>

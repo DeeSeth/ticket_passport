@@ -159,7 +159,7 @@ export default function EventDetailPage() {
               <div>
                 <h4 className="font-semibold text-blue-400 mb-1">Ticketmaster Event</h4>
                 <p className="text-sm text-neutral-400">
-                  This event is powered by Ticketmaster. Tickets listed for resale on PASSPORT must comply with the resale rules shown above.
+                  This event is powered by Ticketmaster. Tickets listed for resale on T-PASSPORT must comply with the resale rules shown above.
                 </p>
               </div>
             </div>

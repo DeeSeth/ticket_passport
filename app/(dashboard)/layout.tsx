@@ -92,7 +92,7 @@ export default function DashboardLayout({
               <div className="w-8 h-8 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                 <span className="text-amber-200 font-bold text-sm">P</span>
               </div>
-              <span className="font-medium text-white hidden sm:block">PASSPORT</span>
+              <span className="font-medium text-white hidden sm:block">T-PASSPORT</span>
             </Link>
 
             {/* Desktop Nav */}

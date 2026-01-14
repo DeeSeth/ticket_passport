@@ -11,7 +11,7 @@ export default function ForVenuesPage() {
               <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                 <span className="text-amber-200 font-bold text-xl">P</span>
               </div>
-              <span className="font-medium text-white text-lg tracking-wide">PASSPORT</span>
+              <span className="font-medium text-white text-lg tracking-wide">T-PASSPORT</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/login" className="text-neutral-300 hover:text-white font-medium transition-colors">
@@ -44,7 +44,7 @@ export default function ForVenuesPage() {
               <span className="text-amber-200">Happier Fans.</span>
             </h1>
             <p className="text-xl text-neutral-400 leading-relaxed mb-8">
-              Eliminate gate fraud, reduce entry friction, and create better experiences. PASSPORT integrates with your existing systems to verify every ticket before fans reach the door.
+              Eliminate gate fraud, reduce entry friction, and create better experiences. T-PASSPORT integrates with your existing systems to verify every ticket before fans reach the door.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <a
@@ -134,7 +134,7 @@ export default function ForVenuesPage() {
       <section className="py-24 bg-neutral-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">How PASSPORT Works for Venues</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">How T-PASSPORT Works for Venues</h2>
             <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
               Simple integration. Immediate results. Better experiences.
             </p>
@@ -152,7 +152,7 @@ export default function ForVenuesPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-3">Integrate</h3>
               <p className="text-neutral-400 leading-relaxed">
-                Connect PASSPORT to your existing ticketing and access control systems. Our API works with all major platforms.
+                Connect T-PASSPORT to your existing ticketing and access control systems. Our API works with all major platforms.
               </p>
             </div>
 
@@ -167,7 +167,7 @@ export default function ForVenuesPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-3">Verify</h3>
               <p className="text-neutral-400 leading-relaxed">
-                PASSPORT validates tickets in real-time. Cleared tickets show green at scan. Fraudulent tickets are flagged instantly.
+                T-PASSPORT validates tickets in real-time. Cleared tickets show green at scan. Fraudulent tickets are flagged instantly.
               </p>
             </div>
 
@@ -195,7 +195,7 @@ export default function ForVenuesPage() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">Partner Benefits</h2>
             <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
-              Join 500+ venues already using PASSPORT to improve their operations.
+              Join 500+ venues already using T-PASSPORT to improve their operations.
             </p>
           </div>
 
@@ -220,7 +220,7 @@ export default function ForVenuesPage() {
               </div>
               <h3 className="text-lg font-bold text-white mb-2">Zero Fraud</h3>
               <p className="text-neutral-400 text-sm">
-                PASSPORT-cleared tickets are guaranteed valid. If a cleared ticket fails, we handle the refund—not you.
+                T-PASSPORT-cleared tickets are guaranteed valid. If a cleared ticket fails, we handle the refund—not you.
               </p>
             </div>
 
@@ -308,7 +308,7 @@ export default function ForVenuesPage() {
                 Works With Your <span className="text-amber-200">Existing Systems</span>
               </h2>
               <p className="text-neutral-400 mb-8 leading-relaxed">
-                PASSPORT integrates seamlessly with all major ticketing platforms and access control systems. No need to replace your infrastructure—we work with what you have.
+                T-PASSPORT integrates seamlessly with all major ticketing platforms and access control systems. No need to replace your infrastructure—we work with what you have.
               </p>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -405,7 +405,7 @@ export default function ForVenuesPage() {
                 <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                   <span className="text-amber-200 font-bold text-xl">P</span>
                 </div>
-                <span className="font-medium text-white text-lg">PASSPORT</span>
+                <span className="font-medium text-white text-lg">T-PASSPORT</span>
               </div>
               <p className="text-neutral-500 text-sm">
                 The global standard for concert entry and safe resale.
@@ -437,7 +437,7 @@ export default function ForVenuesPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-neutral-800 text-center text-neutral-500 text-sm">
-            <p>&copy; 2026 Ticket PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
+            <p>&copy; 2026 Ticket T-PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
           </div>
         </div>
       </footer>

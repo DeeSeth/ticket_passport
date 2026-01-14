@@ -281,7 +281,7 @@ export default function WalletPage() {
           <p className="text-2xl font-bold text-orange-400">{stats.listed}</p>
         </div>
         <div className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50">
-          <p className="text-sm text-neutral-400">Cleared by PASSPORT</p>
+          <p className="text-sm text-neutral-400">Cleared by T-PASSPORT</p>
           <p className="text-2xl font-bold text-emerald-400">{stats.cleared}</p>
         </div>
       </div>
