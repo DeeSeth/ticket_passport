@@ -46,7 +46,7 @@ export interface Ticket {
   faceValue: number;
   currency: string;
   isCleared: boolean; // Verified by PASSPORT
-  resaleStatus: 'not_listed' | 'listed' | 'pending_transfer' | 'sold';
+  resaleStatus: 'not_listed' | 'listed' | 'in_auction' | 'pending_transfer' | 'sold';
   resalePrice?: number;
   barcode: string;
   purchasedAt: Date;
@@ -73,6 +73,26 @@ export interface ResaleListing {
   listedAt: Date;
   status: 'active' | 'pending' | 'sold' | 'cancelled';
   expiresAt?: Date;
+  // Auction/bidding fields
+  isAuction?: boolean;
+  minimumBid?: number;
+  reservePrice?: number; // Minimum price seller will accept
+  auctionEndsAt?: Date;
+  currentHighestBid?: number;
+  totalBids?: number;
+}
+
+// Bid on an auction listing
+export interface Bid {
+  id: string;
+  listingId: string;
+  bidderId: string;
+  bidderName: string;
+  amount: number;
+  bidAt: Date;
+  status: 'active' | 'outbid' | 'winning' | 'won' | 'lost' | 'withdrawn';
+  isAutoBid?: boolean; // For auto-bidding feature
+  maxAutoBid?: number; // Maximum amount for auto-bidding
 }
 
 // Purchase/escrow state

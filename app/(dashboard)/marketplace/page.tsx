@@ -162,8 +162,15 @@ export default function MarketplacePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {listings.slice(0, viewMode === 'all' ? 4 : undefined).map((listing) => {
             const maxPrice = getMaxResalePrice(listing.ticket, listing.event);
-            const isPriceWithinCap = listing.askingPrice <= maxPrice;
+            const isPriceWithinCap = !listing.isAuction && listing.askingPrice <= maxPrice;
             const savings = maxPrice - listing.askingPrice;
+
+            // Calculate time remaining for auction
+            const timeRemaining = listing.isAuction && listing.auctionEndsAt
+              ? Math.max(0, new Date(listing.auctionEndsAt).getTime() - new Date().getTime())
+              : 0;
+            const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
+            const daysRemaining = Math.floor(hoursRemaining / 24);
 
             return (
               <div key={listing.id} className="bg-neutral-700/50 rounded-xl border border-neutral-600/50 overflow-hidden hover:border-amber-200/30 transition-colors">
@@ -182,7 +189,12 @@ export default function MarketplacePage() {
                         <h3 className="font-bold text-white">{listing.event.artist}</h3>
                         <p className="text-sm text-neutral-400">{listing.event.name}</p>
                       </div>
-                      <Badge variant="cleared" size="sm">Cleared</Badge>
+                      <div className="flex flex-col gap-1 items-end">
+                        <Badge variant="cleared" size="sm">Cleared</Badge>
+                        {listing.isAuction && (
+                          <Badge variant="info" size="sm">Auction</Badge>
+                        )}
+                      </div>
                     </div>
 
                     <p className="text-sm text-neutral-500">
@@ -207,20 +219,48 @@ export default function MarketplacePage() {
                     {/* Price section */}
                     <div className="flex items-end justify-between">
                       <div>
-                        <p className="text-xs text-neutral-500">
-                          Face value: {formatCurrency(listing.ticket.faceValue, listing.ticket.currency)}
-                        </p>
-                        <p className="text-xl font-bold text-amber-200">
-                          {formatCurrency(listing.askingPrice, listing.ticket.currency)}
-                        </p>
-                        {isPriceWithinCap && savings > 0 && (
-                          <p className="text-xs text-emerald-400">
-                            {formatCurrency(savings, listing.ticket.currency)} below cap
-                          </p>
+                        {listing.isAuction ? (
+                          <>
+                            <p className="text-xs text-neutral-500">
+                              {listing.currentHighestBid ? 'Current bid' : 'Starting bid'}
+                            </p>
+                            <p className="text-xl font-bold text-amber-200">
+                              {formatCurrency(listing.currentHighestBid || listing.minimumBid || 0, listing.ticket.currency)}
+                            </p>
+                            {listing.totalBids && listing.totalBids > 0 && (
+                              <p className="text-xs text-blue-400">
+                                {listing.totalBids} {listing.totalBids === 1 ? 'bid' : 'bids'}
+                              </p>
+                            )}
+                            {timeRemaining > 0 && (
+                              <p className="text-xs text-neutral-500 mt-1">
+                                {daysRemaining > 0
+                                  ? `Ends in ${daysRemaining}d ${hoursRemaining % 24}h`
+                                  : `Ends in ${hoursRemaining}h`
+                                }
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-neutral-500">
+                              Face value: {formatCurrency(listing.ticket.faceValue, listing.ticket.currency)}
+                            </p>
+                            <p className="text-xl font-bold text-amber-200">
+                              {formatCurrency(listing.askingPrice, listing.ticket.currency)}
+                            </p>
+                            {isPriceWithinCap && savings > 0 && (
+                              <p className="text-xs text-emerald-400">
+                                {formatCurrency(savings, listing.ticket.currency)} below cap
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                       <Link href={`/marketplace/${listing.id}`}>
-                        <Button size="sm" variant="gold">View Details</Button>
+                        <Button size="sm" variant="gold">
+                          {listing.isAuction ? 'Place Bid' : 'View Details'}
+                        </Button>
                       </Link>
                     </div>
 

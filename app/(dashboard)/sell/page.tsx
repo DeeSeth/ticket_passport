@@ -13,17 +13,25 @@ import {
   getMaxResalePrice,
 } from '@/lib/mock-data';
 
-type SellStep = 'select' | 'price' | 'review' | 'success';
+type SellStep = 'select' | 'listing_type' | 'price' | 'auction_setup' | 'review' | 'success';
+type ListingType = 'fixed' | 'auction';
 
 export default function SellPage() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
 
   const preselectedTicketId = searchParams.get('ticket');
-  const [step, setStep] = useState<SellStep>(preselectedTicketId ? 'price' : 'select');
+  const [step, setStep] = useState<SellStep>(preselectedTicketId ? 'listing_type' : 'select');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(preselectedTicketId);
+  const [listingType, setListingType] = useState<ListingType>('fixed');
   const [askingPrice, setAskingPrice] = useState<string>('');
   const [priceError, setPriceError] = useState<string>('');
+
+  // Auction-specific state
+  const [minimumBid, setMinimumBid] = useState<string>('');
+  const [reservePrice, setReservePrice] = useState<string>('');
+  const [auctionDuration, setAuctionDuration] = useState<string>('24'); // hours
+  const [auctionError, setAuctionError] = useState<string>('');
 
   // Get user's sellable tickets
   const sellableTickets = useMemo(() => {
@@ -56,9 +64,17 @@ export default function SellPage() {
 
   const handleSelectTicket = (ticketId: string) => {
     setSelectedTicketId(ticketId);
-    setStep('price');
+    setStep('listing_type');
     setAskingPrice('');
     setPriceError('');
+    setMinimumBid('');
+    setReservePrice('');
+    setAuctionError('');
+  };
+
+  const handleListingTypeSelect = (type: ListingType) => {
+    setListingType(type);
+    setStep(type === 'fixed' ? 'price' : 'auction_setup');
   };
 
   const validatePrice = (price: string): boolean => {
@@ -85,14 +101,53 @@ export default function SellPage() {
     }
   };
 
+  const validateAuction = (): boolean => {
+    const minBid = parseFloat(minimumBid);
+    const reserve = parseFloat(reservePrice);
+    const duration = parseInt(auctionDuration);
+
+    if (isNaN(minBid) || minBid <= 0) {
+      setAuctionError('Please enter a valid minimum bid');
+      return false;
+    }
+    if (minBid < selectedTicket!.ticket.faceValue * 0.5) {
+      setAuctionError('Minimum bid cannot be less than 50% of face value');
+      return false;
+    }
+    if (reserve && !isNaN(reserve)) {
+      if (reserve < minBid) {
+        setAuctionError('Reserve price must be greater than minimum bid');
+        return false;
+      }
+      if (reserve > maxPrice) {
+        setAuctionError(`Reserve price cannot exceed ${formatCurrency(maxPrice, selectedTicket!.ticket.currency)}`);
+        return false;
+      }
+    }
+    if (isNaN(duration) || duration < 1 || duration > 168) {
+      setAuctionError('Auction duration must be between 1 and 168 hours (7 days)');
+      return false;
+    }
+    setAuctionError('');
+    return true;
+  };
+
+  const handleAuctionSubmit = () => {
+    if (validateAuction()) {
+      setStep('review');
+    }
+  };
+
   const handleListTicket = async () => {
     // Simulate listing process
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setStep('success');
   };
 
-  // Calculate fees
-  const numericPrice = parseFloat(askingPrice) || 0;
+  // Calculate fees (for fixed price listing or estimated for auction)
+  const numericPrice = listingType === 'fixed'
+    ? parseFloat(askingPrice) || 0
+    : parseFloat(reservePrice) || parseFloat(minimumBid) || 0;
   const platformFee = Math.round(numericPrice * 0.08);
   const charityAmount = selectedTicket
     ? Math.round(
@@ -102,6 +157,10 @@ export default function SellPage() {
     : 0;
   const sellerPayout = numericPrice - platformFee - charityAmount;
 
+  // Auction end date calculation
+  const auctionEndDate = new Date();
+  auctionEndDate.setHours(auctionEndDate.getHours() + parseInt(auctionDuration || '24'));
+
   if (step === 'success') {
     return (
       <div className="max-w-md mx-auto text-center py-12">
@@ -110,9 +169,13 @@ export default function SellPage() {
             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Ticket Listed!</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          {listingType === 'auction' ? 'Auction Started!' : 'Ticket Listed!'}
+        </h2>
         <p className="text-neutral-400 mb-6">
-          Your ticket is now live on the marketplace. We&apos;ll notify you when it sells.
+          {listingType === 'auction'
+            ? `Your auction is now live and will end ${auctionEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${auctionEndDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. We'll notify you when bids are placed.`
+            : "Your ticket is now live on the marketplace. We'll notify you when it sells."}
         </p>
         <div className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50 text-left mb-6">
           <div className="space-y-2">
@@ -120,14 +183,39 @@ export default function SellPage() {
               <span className="text-neutral-400">Event</span>
               <span className="font-medium text-white">{selectedTicket?.event.artist}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-400">Asking Price</span>
-              <span className="font-medium text-white">{formatCurrency(numericPrice, selectedTicket!.ticket.currency)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-400">You&apos;ll receive</span>
-              <span className="font-bold text-emerald-400">{formatCurrency(sellerPayout, selectedTicket!.ticket.currency)}</span>
-            </div>
+            {listingType === 'auction' ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Listing Type</span>
+                  <span className="font-medium text-white">Auction</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Starting Bid</span>
+                  <span className="font-medium text-white">{formatCurrency(parseFloat(minimumBid), selectedTicket!.ticket.currency)}</span>
+                </div>
+                {reservePrice && parseFloat(reservePrice) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Reserve Price</span>
+                    <span className="font-medium text-white">{formatCurrency(parseFloat(reservePrice), selectedTicket!.ticket.currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Auction Ends</span>
+                  <span className="font-medium text-white">{auctionEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Asking Price</span>
+                  <span className="font-medium text-white">{formatCurrency(numericPrice, selectedTicket!.ticket.currency)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">You&apos;ll receive</span>
+                  <span className="font-bold text-emerald-400">{formatCurrency(sellerPayout, selectedTicket!.ticket.currency)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
         <div className="flex gap-3 justify-center">
@@ -151,28 +239,36 @@ export default function SellPage() {
 
       {/* Progress steps */}
       <div className="flex items-center gap-2">
-        {['select', 'price', 'review'].map((s, i) => (
-          <div key={s} className="flex items-center">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step === s
-                  ? 'bg-amber-200 text-neutral-900'
-                  : ['select', 'price', 'review'].indexOf(step) > i
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-neutral-700 text-neutral-400'
-              }`}
-            >
-              {['select', 'price', 'review'].indexOf(step) > i ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                i + 1
-              )}
+        {['select', 'listing_type', listingType === 'fixed' ? 'price' : 'auction_setup', 'review'].map((s, i) => {
+          const stepOrder = ['select', 'listing_type', 'price', 'auction_setup', 'review'];
+          const currentStepIndex = stepOrder.indexOf(step);
+          const thisStepIndex = stepOrder.indexOf(s);
+          const isCompleted = currentStepIndex > thisStepIndex;
+          const isCurrent = step === s;
+
+          return (
+            <div key={s} className="flex items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  isCurrent
+                    ? 'bg-amber-200 text-neutral-900'
+                    : isCompleted
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-neutral-700 text-neutral-400'
+                }`}
+              >
+                {isCompleted ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  i + 1
+                )}
+              </div>
+              {i < 3 && <div className="w-12 h-0.5 bg-neutral-700 mx-2"></div>}
             </div>
-            {i < 2 && <div className="w-12 h-0.5 bg-neutral-700 mx-2"></div>}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Step content */}
@@ -223,6 +319,224 @@ export default function SellPage() {
               </Link>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Listing type selection */}
+      {step === 'listing_type' && selectedTicket && (
+        <div className="space-y-6">
+          <button
+            onClick={() => {
+              setStep('select');
+              setSelectedTicketId(null);
+            }}
+            className="flex items-center gap-2 text-neutral-400 hover:text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Change ticket
+          </button>
+
+          <h2 className="text-lg font-semibold text-white">Choose Listing Type</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Fixed Price Option */}
+            <button
+              onClick={() => handleListingTypeSelect('fixed')}
+              className="bg-neutral-700/50 rounded-xl p-6 border-2 border-neutral-600/50 hover:border-amber-200/50 transition-colors text-left"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-amber-200/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-white mb-2">Fixed Price</h3>
+                  <p className="text-sm text-neutral-400">
+                    Set a price and sell immediately when a buyer accepts. Quick and simple.
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Auction Option */}
+            <button
+              onClick={() => handleListingTypeSelect('auction')}
+              className="bg-neutral-700/50 rounded-xl p-6 border-2 border-neutral-600/50 hover:border-amber-200/50 transition-colors text-left"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-white mb-2">Auction</h3>
+                  <p className="text-sm text-neutral-400">
+                    Let buyers compete with bids. Great for high-demand events to maximize value.
+                  </p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Auction setup */}
+      {step === 'auction_setup' && selectedTicket && (
+        <div className="space-y-6">
+          <button
+            onClick={() => setStep('listing_type')}
+            className="flex items-center gap-2 text-neutral-400 hover:text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Change listing type
+          </button>
+
+          {/* Selected ticket summary */}
+          <div className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-200 to-amber-300 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-neutral-900 text-2xl font-bold">{selectedTicket.event.artist.charAt(0)}</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-white">{selectedTicket.event.artist}</h3>
+                <p className="text-sm text-neutral-400">{selectedTicket.event.name}</p>
+                <p className="text-sm text-neutral-500">
+                  {selectedTicket.ticket.section} • Row {selectedTicket.ticket.row} • Seat {selectedTicket.ticket.seat}
+                </p>
+              </div>
+              <Badge variant="cleared">Cleared</Badge>
+            </div>
+          </div>
+
+          {/* Resale rules */}
+          <ResaleRulesDisplay
+            rules={selectedTicket.event.resaleRules}
+            faceValue={selectedTicket.ticket.faceValue}
+            currency={selectedTicket.ticket.currency}
+            dark
+          />
+
+          {/* Auction configuration */}
+          <div className="bg-neutral-700/50 rounded-xl p-6 border border-neutral-600/50">
+            <h2 className="text-lg font-semibold text-white mb-4">Configure Auction</h2>
+
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-neutral-400 mb-2">
+                  <span>Face value: {formatCurrency(selectedTicket.ticket.faceValue, selectedTicket.ticket.currency)}</span>
+                  <span>•</span>
+                  <span>Max allowed: {formatCurrency(maxPrice, selectedTicket.ticket.currency)}</span>
+                </div>
+                <Input
+                  label="Starting Bid (Minimum Bid)"
+                  type="number"
+                  value={minimumBid}
+                  onChange={(e) => {
+                    setMinimumBid(e.target.value);
+                    setAuctionError('');
+                  }}
+                  placeholder="Enter minimum bid amount"
+                  dark
+                />
+              </div>
+
+              <Input
+                label="Reserve Price (Optional)"
+                type="number"
+                value={reservePrice}
+                onChange={(e) => {
+                  setReservePrice(e.target.value);
+                  setAuctionError('');
+                }}
+                placeholder="Minimum price to accept (hidden from bidders)"
+                dark
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Auction Duration
+                </label>
+                <select
+                  value={auctionDuration}
+                  onChange={(e) => {
+                    setAuctionDuration(e.target.value);
+                    setAuctionError('');
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                >
+                  <option value="24">24 hours</option>
+                  <option value="48">48 hours (2 days)</option>
+                  <option value="72">72 hours (3 days)</option>
+                  <option value="120">5 days</option>
+                  <option value="168">7 days</option>
+                </select>
+              </div>
+
+              {auctionError && (
+                <p className="text-sm text-red-400">{auctionError}</p>
+              )}
+
+              {/* Info banner */}
+              <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <div className="text-sm text-neutral-300">
+                    <p className="mb-1"><strong className="text-white">How auctions work:</strong></p>
+                    <ul className="space-y-1 text-neutral-400">
+                      <li>• Bidders compete by placing increasingly higher bids</li>
+                      <li>• Reserve price is kept private - auction succeeds only if met</li>
+                      <li>• Highest bid wins when auction ends</li>
+                      <li>• Payment held in escrow until ticket transfer completes</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estimated payout preview */}
+              {parseFloat(minimumBid) > 0 && !auctionError && (
+                <div className="bg-neutral-800 rounded-lg p-4 space-y-2">
+                  <p className="text-sm text-neutral-400 mb-2">Estimated payout (at reserve price):</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-400">
+                      {reservePrice && parseFloat(reservePrice) > 0 ? 'Reserve price' : 'Starting bid'}
+                    </span>
+                    <span className="text-white">{formatCurrency(numericPrice, selectedTicket.ticket.currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-400">Platform fee (8%)</span>
+                    <span className="text-red-400">-{formatCurrency(platformFee, selectedTicket.ticket.currency)}</span>
+                  </div>
+                  {charityAmount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-neutral-400">Charity ({selectedTicket.event.resaleRules.charityPercentage}% of premium)</span>
+                      <span className="text-red-400">-{formatCurrency(charityAmount, selectedTicket.ticket.currency)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-neutral-700">
+                    <span className="font-semibold text-white">You&apos;ll receive</span>
+                    <span className="font-bold text-emerald-400">{formatCurrency(sellerPayout, selectedTicket.ticket.currency)}</span>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={handleAuctionSubmit}
+                variant="gold"
+                className="w-full"
+                disabled={!minimumBid || parseFloat(minimumBid) <= 0}
+              >
+                Continue to Review
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -328,19 +642,25 @@ export default function SellPage() {
       {step === 'review' && selectedTicket && (
         <div className="space-y-6">
           <button
-            onClick={() => setStep('price')}
+            onClick={() => setStep(listingType === 'fixed' ? 'price' : 'auction_setup')}
             className="flex items-center gap-2 text-neutral-400 hover:text-white"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Change price
+            Change {listingType === 'fixed' ? 'price' : 'auction settings'}
           </button>
 
           <div className="bg-neutral-700/50 rounded-xl p-6 border border-neutral-600/50">
             <h2 className="text-lg font-semibold text-white mb-4">Review Your Listing</h2>
 
             <div className="space-y-4 mb-6">
+              <div className="flex justify-between">
+                <span className="text-neutral-400">Listing Type</span>
+                <span className="font-medium text-white">
+                  {listingType === 'fixed' ? 'Fixed Price' : 'Auction'}
+                </span>
+              </div>
               <div className="flex justify-between">
                 <span className="text-neutral-400">Event</span>
                 <span className="font-medium text-white">{selectedTicket.event.artist} - {selectedTicket.event.name}</span>
@@ -353,26 +673,66 @@ export default function SellPage() {
                 <span className="text-neutral-400">Face Value</span>
                 <span className="font-medium text-white">{formatCurrency(selectedTicket.ticket.faceValue, selectedTicket.ticket.currency)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-400">Your Asking Price</span>
-                <span className="font-bold text-lg text-amber-200">{formatCurrency(numericPrice, selectedTicket.ticket.currency)}</span>
-              </div>
-              <div className="border-t border-neutral-600 pt-4 flex justify-between">
-                <span className="font-semibold text-white">You&apos;ll receive (after fees)</span>
-                <span className="font-bold text-lg text-emerald-400">{formatCurrency(sellerPayout, selectedTicket.ticket.currency)}</span>
-              </div>
+
+              {listingType === 'auction' ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Starting Bid</span>
+                    <span className="font-bold text-lg text-amber-200">{formatCurrency(parseFloat(minimumBid), selectedTicket.ticket.currency)}</span>
+                  </div>
+                  {reservePrice && parseFloat(reservePrice) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-neutral-400">Reserve Price</span>
+                      <span className="font-medium text-white">{formatCurrency(parseFloat(reservePrice), selectedTicket.ticket.currency)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Auction Duration</span>
+                    <span className="font-medium text-white">{auctionDuration} hours</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Auction Ends</span>
+                    <span className="font-medium text-white">
+                      {auctionEndDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  {reservePrice && parseFloat(reservePrice) > 0 && (
+                    <div className="border-t border-neutral-600 pt-4 flex justify-between">
+                      <span className="font-semibold text-white">Est. payout at reserve (after fees)</span>
+                      <span className="font-bold text-lg text-emerald-400">{formatCurrency(sellerPayout, selectedTicket.ticket.currency)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Your Asking Price</span>
+                    <span className="font-bold text-lg text-amber-200">{formatCurrency(numericPrice, selectedTicket.ticket.currency)}</span>
+                  </div>
+                  <div className="border-t border-neutral-600 pt-4 flex justify-between">
+                    <span className="font-semibold text-white">You&apos;ll receive (after fees)</span>
+                    <span className="font-bold text-lg text-emerald-400">{formatCurrency(sellerPayout, selectedTicket.ticket.currency)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Terms notice */}
             <div className="bg-amber-200/10 rounded-lg p-4 mb-6 border border-amber-200/20">
               <p className="text-sm text-amber-200">
-                By listing, you agree to transfer this ticket to the buyer within 24 hours of sale.
-                Payment will be released after successful transfer verification.
+                {listingType === 'auction'
+                  ? 'By starting this auction, you agree to transfer the ticket to the winning bidder within 24 hours of auction end. Payment will be held in escrow until transfer is verified.'
+                  : 'By listing, you agree to transfer this ticket to the buyer within 24 hours of sale. Payment will be released after successful transfer verification.'}
               </p>
             </div>
 
             <Button onClick={handleListTicket} variant="gold" className="w-full" size="lg">
-              List Ticket for Sale
+              {listingType === 'auction' ? 'Start Auction' : 'List Ticket for Sale'}
             </Button>
           </div>
         </div>
