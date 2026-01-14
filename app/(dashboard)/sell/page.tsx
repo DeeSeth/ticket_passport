@@ -92,6 +92,12 @@ function SellableTicketCard({
     </div>
   );
 }
+import {
+  createListing,
+  generateListingId,
+  isTicketListed,
+  StoredListing,
+} from '@/lib/listing-store';
 
 type SellStep = 'select' | 'listing_type' | 'price' | 'auction_setup' | 'review' | 'success';
 type ListingType = 'fixed' | 'auction';
@@ -112,6 +118,8 @@ export default function SellPage() {
   const [reservePrice, setReservePrice] = useState<string>('');
   const [auctionDuration, setAuctionDuration] = useState<string>('24'); // hours
   const [auctionError, setAuctionError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdListingId, setCreatedListingId] = useState<string | null>(null);
 
   // Get user's sellable tickets
   const sellableTickets = useMemo(() => {
@@ -120,6 +128,7 @@ export default function SellPage() {
         (ticket) =>
           ticket.ownerId === user?.id &&
           ticket.resaleStatus === 'not_listed' &&
+          !isTicketListed(ticket.id) && // Check localStorage listings too
           new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
       )
       .map((ticket) => ({
@@ -219,9 +228,57 @@ export default function SellPage() {
   };
 
   const handleListTicket = async () => {
-    // Simulate listing process
+    if (!user || !selectedTicket) return;
+
+    setIsSubmitting(true);
+
+    // Simulate processing
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    setStep('success');
+
+    // Create the listing object
+    const listing: StoredListing = {
+      id: generateListingId(),
+      ticketId: selectedTicket.ticket.id,
+      eventId: selectedTicket.event.id,
+      sellerId: user.id,
+      sellerName: user.name,
+      // Event/ticket details
+      eventArtist: selectedTicket.event.artist,
+      eventName: selectedTicket.event.name,
+      eventDate: selectedTicket.event.date,
+      eventVenue: selectedTicket.event.venue,
+      eventCity: selectedTicket.event.city,
+      eventCountry: selectedTicket.event.country,
+      section: selectedTicket.ticket.section,
+      row: selectedTicket.ticket.row,
+      seat: selectedTicket.ticket.seat,
+      faceValue: selectedTicket.ticket.faceValue,
+      currency: selectedTicket.ticket.currency,
+      // Listing details
+      listingType,
+      askingPrice: listingType === 'fixed' ? parseFloat(askingPrice) : 0,
+      // Auction fields
+      minimumBid: listingType === 'auction' ? parseFloat(minimumBid) : undefined,
+      reservePrice: listingType === 'auction' && reservePrice ? parseFloat(reservePrice) : undefined,
+      auctionEndsAt: listingType === 'auction' ? auctionEndDate.toISOString() : undefined,
+      currentHighestBid: undefined,
+      totalBids: 0,
+      // Status
+      status: 'active',
+      listedAt: new Date().toISOString(),
+    };
+
+    const result = createListing(listing);
+
+    if (result.success) {
+      setCreatedListingId(listing.id);
+      setStep('success');
+    } else {
+      // Show error (you could add error state handling here)
+      console.error('Failed to create listing:', result.error);
+    }
+
+    setIsSubmitting(false);
   };
 
   // Calculate fees (for fixed price listing or estimated for auction)
@@ -776,8 +833,18 @@ export default function SellPage() {
               </p>
             </div>
 
-            <Button onClick={handleListTicket} variant="gold" className="w-full" size="lg">
-              {listingType === 'auction' ? 'Start Auction' : 'List Ticket for Sale'}
+            <Button
+              onClick={handleListTicket}
+              variant="gold"
+              className="w-full"
+              size="lg"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? 'Creating Listing...'
+                : listingType === 'auction'
+                ? 'Start Auction'
+                : 'List Ticket for Sale'}
             </Button>
           </div>
         </div>
