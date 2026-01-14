@@ -459,8 +459,8 @@ export default function SellPage() {
               <p className="text-neutral-400 mb-4">
                 You don&apos;t have any upcoming tickets that can be listed.
               </p>
-              <Link href="/marketplace">
-                <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">Browse Marketplace</Button>
+              <Link href="/wallet">
+                <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">Browse My Tickets</Button>
               </Link>
             </div>
           )}
