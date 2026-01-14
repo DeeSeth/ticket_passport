@@ -56,7 +56,7 @@ const standardRules: ResaleRules = {
 };
 
 const strictRules: ResaleRules = {
-  maxPriceMultiplier: 1.0, // Face value only
+  maxPriceMultiplier: 2.0, // Allow up to 2x face value (platform-wide cap)
   fanOnlyWindowHours: 72,
   transferDeadlineHours: 48,
   requiresIdMatch: true,
@@ -292,10 +292,10 @@ export const mockListings: ResaleListing[] = [
     listedAt: new Date('2026-01-12'),
     status: 'active',
     isAuction: true,
-    minimumBid: 450,
-    reservePrice: 600,
+    minimumBid: 500, // Starting bid above face value ($450)
+    reservePrice: 700,
     auctionEndsAt: new Date('2026-01-17T20:00:00'),
-    currentHighestBid: 520,
+    currentHighestBid: 620,
     totalBids: 3,
   },
   {
@@ -306,10 +306,10 @@ export const mockListings: ResaleListing[] = [
     listedAt: new Date('2026-01-13'),
     status: 'active',
     isAuction: true,
-    minimumBid: 200,
-    reservePrice: 280,
+    minimumBid: 250, // Starting bid above face value ($200)
+    reservePrice: 350,
     auctionEndsAt: new Date('2026-01-15T19:00:00'),
-    currentHighestBid: 245,
+    currentHighestBid: 310,
     totalBids: 5,
   },
 ];
