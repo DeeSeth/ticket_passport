@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -15,7 +15,7 @@ import {
 import {
   createListing,
   generateListingId,
-  isTicketListed,
+  getAllListings,
   StoredListing,
 } from '@/lib/listing-store';
 
@@ -40,15 +40,28 @@ export default function SellPage() {
   const [auctionError, setAuctionError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdListingId, setCreatedListingId] = useState<string | null>(null);
+  const [existingListings, setExistingListings] = useState<StoredListing[]>([]);
+
+  // Load existing listings from localStorage (client-side only)
+  useEffect(() => {
+    setExistingListings(getAllListings());
+  }, []);
 
   // Get user's sellable tickets
   const sellableTickets = useMemo(() => {
+    // Create a Set of already listed ticket IDs for quick lookup
+    const listedTicketIds = new Set(
+      existingListings
+        .filter(l => l.status === 'active')
+        .map(l => l.ticketId)
+    );
+
     return mockTickets
       .filter(
         (ticket) =>
           ticket.ownerId === user?.id &&
           ticket.resaleStatus === 'not_listed' &&
-          !isTicketListed(ticket.id) && // Check localStorage listings too
+          !listedTicketIds.has(ticket.id) && // Check localStorage listings too
           new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
       )
       .map((ticket) => ({
@@ -56,7 +69,7 @@ export default function SellPage() {
         event: getEventById(ticket.eventId)!,
       }))
       .filter(({ event }) => event !== undefined);
-  }, [user?.id]);
+  }, [user?.id, existingListings]);
 
   const selectedTicket = useMemo(() => {
     if (!selectedTicketId) return null;
@@ -191,6 +204,8 @@ export default function SellPage() {
     const result = createListing(listing);
 
     if (result.success) {
+      // Update local state to reflect the new listing
+      setExistingListings(prev => [...prev, listing]);
       setCreatedListingId(listing.id);
       setStep('success');
     } else {

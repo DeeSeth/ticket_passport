@@ -37,8 +37,8 @@ export default function MarketplacePage() {
     const mockListings = getMockListings();
 
     // Transform user listings to match display format
+    // Show all listings including user's own (they'll be marked as "Your Listing")
     const transformedUserListings: DisplayListing[] = userListings
-      .filter(ul => ul.sellerId !== user?.id) // Don't show your own listings
       .map(ul => ({
         id: ul.id,
         askingPrice: ul.askingPrice,
@@ -75,6 +75,7 @@ export default function MarketplacePage() {
           name: ul.sellerName,
         },
         isUserListing: true,
+        isOwnListing: ul.sellerId === user?.id,
       }));
 
     // Combine mock and user listings
@@ -256,6 +257,9 @@ export default function MarketplacePage() {
                         <p className="text-sm text-neutral-400">{listing.event.name}</p>
                       </div>
                       <div className="flex flex-col gap-1 items-end">
+                        {listing.isOwnListing && (
+                          <Badge variant="warning" size="sm">Your Listing</Badge>
+                        )}
                         <Badge variant="cleared" size="sm">Cleared</Badge>
                         {listing.isAuction && (
                           <Badge variant="info" size="sm">Auction</Badge>
