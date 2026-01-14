@@ -105,7 +105,7 @@ export default function MarketplaceDetailPage() {
         city: userListing.eventCity,
         country: userListing.eventCountry,
         resaleRules: {
-          maxPriceMultiplier: 1.5,
+          maxPriceMultiplier: 2.0, // Default to 2x max price cap
           fanOnlyWindowHours: 48,
           transferDeadlineHours: 24,
           requiresIdMatch: true,
@@ -161,7 +161,9 @@ export default function MarketplaceDetailPage() {
   }
 
   const { listing, ticket, event, seller } = listingData;
-  const maxPrice = getMaxResalePrice(ticket, event);
+  // Enforce max bid/price as 2x face value (200% cap)
+  const maxMultiplier = Math.min(event.resaleRules.maxPriceMultiplier, 2.0);
+  const maxPrice = Math.floor(ticket.faceValue * maxMultiplier);
 
   // For auctions, use bid amount; for fixed price, use asking price
   const isAuction = listing.isAuction || false;
@@ -201,7 +203,7 @@ export default function MarketplaceDetailPage() {
     }
 
     if (bid > maxPrice) {
-      setBidError(`Bid cannot exceed the price cap of ${formatCurrency(maxPrice, ticket.currency)}`);
+      setBidError(`Bid cannot exceed 2x face value (${formatCurrency(maxPrice, ticket.currency)})`);
       return false;
     }
 
@@ -726,9 +728,10 @@ export default function MarketplaceDetailPage() {
                         error={bidError}
                         dark
                       />
-                      <p className="text-xs text-neutral-500 mt-1">
-                        Minimum bid: {formatCurrency(minimumNextBid, ticket.currency)}
-                      </p>
+                      <div className="flex justify-between text-xs text-neutral-500 mt-1">
+                        <span>Min: {formatCurrency(minimumNextBid, ticket.currency)}</span>
+                        <span>Max: {formatCurrency(maxPrice, ticket.currency)} (2x face value)</span>
+                      </div>
                     </div>
 
                     {/* Bid fee breakdown */}
