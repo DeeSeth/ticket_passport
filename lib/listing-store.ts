@@ -121,7 +121,9 @@ export function createListing(listing: StoredListing): { success: boolean; error
 
   try {
     // Check if ticket is already listed
-    if (isTicketListed(listing.ticketId)) {
+    const existingListing = getListingByTicketId(listing.ticketId);
+    if (existingListing) {
+      console.log('Blocking listing creation - existing active listing found:', existingListing);
       return { success: false, error: 'This ticket is already listed' };
     }
 
@@ -219,4 +221,13 @@ export function deleteListing(listingId: string): { success: boolean; error?: st
     console.error('Error deleting listing:', error);
     return { success: false, error: 'Failed to delete listing' };
   }
+}
+
+/**
+ * Clear all listings (for testing/debugging)
+ */
+export function clearAllListings(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(LISTINGS_STORAGE_KEY);
+  console.log('All listings cleared from localStorage');
 }

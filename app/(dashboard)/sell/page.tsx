@@ -17,6 +17,7 @@ import {
   createListing,
   generateListingId,
   getAllListings,
+  clearAllListings,
   StoredListing,
 } from '@/lib/listing-store';
 import { canAccessMarketplace, getVerificationGateMessage, getMissingVerifications } from '@/lib/verification-utils';
@@ -140,6 +141,10 @@ export default function SellPage() {
         .map(l => l.ticketId)
     );
 
+    console.log('Current user:', user?.id, user?.name);
+    console.log('Existing listings:', existingListings);
+    console.log('Listed ticket IDs:', Array.from(listedTicketIds));
+
     // First try to get user's own tickets
     let userTickets = mockTickets.filter(
       (ticket) =>
@@ -149,8 +154,13 @@ export default function SellPage() {
         new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
     );
 
+    console.log('User own tickets found:', userTickets.length);
+
     // For demo: if user has no tickets, show user-2's (Dee's) sellable tickets
     if (userTickets.length === 0 && user) {
+      const deeTickets = mockTickets.filter(t => t.ownerId === 'user-2');
+      console.log('Dee (user-2) total tickets:', deeTickets);
+
       userTickets = mockTickets.filter(
         (ticket) =>
           ticket.ownerId === 'user-2' &&
@@ -158,6 +168,7 @@ export default function SellPage() {
           !listedTicketIds.has(ticket.id) &&
           new Date(getEventById(ticket.eventId)?.date || 0) > new Date()
       );
+      console.log('Filtered Dee tickets for sale:', userTickets);
     }
 
     return userTickets
@@ -303,12 +314,16 @@ export default function SellPage() {
     };
 
     // Save to localStorage
+    console.log('Creating listing:', newListing);
     const result = createListing(newListing);
+    console.log('Create listing result:', result);
 
     if (result.success) {
       setCreatedListingId(newListingId);
       // Update local state to reflect the new listing
-      setExistingListings(getAllListings());
+      const updatedListings = getAllListings();
+      console.log('All listings after creation:', updatedListings);
+      setExistingListings(updatedListings);
       setStep('success');
     } else {
       // Handle error - show error message
@@ -405,14 +420,31 @@ export default function SellPage() {
     );
   }
 
+  const handleClearTestData = () => {
+    clearAllListings();
+    setExistingListings([]);
+    alert('Test data cleared! Refresh the page to see updated tickets.');
+  };
+
   // Gate access for unverified users
   if (!canAccessMarketplace(user)) {
     const missingVerifications = user ? getMissingVerifications(user) : ['email', 'phone', 'id'];
     return (
       <div className="max-w-lg mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Sell a Ticket</h1>
-          <p className="text-neutral-400">List your ticket on the T-PASSPORT marketplace</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Sell a Ticket</h1>
+            <p className="text-neutral-400">List your ticket on the T-PASSPORT marketplace</p>
+          </div>
+          {/* Dev tool to clear test data */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-red-600/50 text-red-400 hover:bg-red-900/20 text-xs"
+            onClick={handleClearTestData}
+          >
+            Clear Test Data
+          </Button>
         </div>
 
         <div className="bg-amber-900/30 rounded-xl p-6 border border-amber-700/50">
@@ -511,9 +543,20 @@ export default function SellPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Sell a Ticket</h1>
-        <p className="text-neutral-400">List your ticket on the T-PASSPORT marketplace</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Sell a Ticket</h1>
+          <p className="text-neutral-400">List your ticket on the T-PASSPORT marketplace</p>
+        </div>
+        {/* Dev tool to clear test data */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-red-600/50 text-red-400 hover:bg-red-900/20 text-xs"
+          onClick={handleClearTestData}
+        >
+          Clear Test Data
+        </Button>
       </div>
 
       {/* Progress steps */}

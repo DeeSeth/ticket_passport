@@ -75,11 +75,26 @@ export default function MarketplacePage() {
 
   // Load user-created listings from localStorage
   useEffect(() => {
-    const storedListings = getUserActiveListings();
-    // Filter out listings from current user (they shouldn't see their own listings to buy)
-    const otherUserListings = storedListings.filter(l => l.sellerId !== user?.id);
-    const transformed = otherUserListings.map(transformStoredListing);
-    setUserListings(transformed);
+    const loadListings = () => {
+      const storedListings = getUserActiveListings();
+      console.log('Loading user listings from localStorage:', storedListings);
+      // Filter out listings from current user (they shouldn't see their own listings to buy)
+      const otherUserListings = storedListings.filter(l => l.sellerId !== user?.id);
+      console.log('Filtered listings (excluding current user):', otherUserListings);
+      const transformed = otherUserListings.map(transformStoredListing);
+      setUserListings(transformed);
+    };
+
+    loadListings();
+
+    // Also listen for storage changes (when another tab updates localStorage)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'passport_listings') {
+        loadListings();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [user?.id]);
 
   // Fetch Ticketmaster events
