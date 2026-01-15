@@ -24,11 +24,57 @@ export default function CameraCapture({
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setIsVideoReady(false);
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode,
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = mediaStream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err: unknown) {
+      console.error('Camera error:', err);
+      setIsLoading(false);
+
+      const errorName = err instanceof Error ? (err as { name?: string }).name : '';
+
+      if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
+        setError('Camera access was denied. Please allow camera access in your browser settings.');
+      } else if (errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError') {
+        setError('No camera found. Please connect a camera and try again.');
+      } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
+        setError('Camera is in use by another application. Please close other apps using the camera.');
+      } else {
+        setError('Unable to access camera. Please check your browser settings.');
+      }
+    }
+  }, [facingMode]);
 
   // Start camera on mount
   useEffect(() => {
@@ -36,77 +82,54 @@ export default function CameraCapture({
     return () => {
       stopCamera();
     };
+  }, [startCamera, stopCamera]);
+
+  // Handle video loaded
+  const handleVideoCanPlay = useCallback(() => {
+    setIsLoading(false);
+    setIsVideoReady(true);
+    if (videoRef.current) {
+      videoRef.current.play().catch(console.error);
+    }
   }, []);
 
-  const startCamera = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
-
-      setStream(mediaStream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play();
-      }
-
-      setIsLoading(false);
-    } catch (err: any) {
-      console.error('Camera error:', err);
-      setIsLoading(false);
-
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setError('Camera access was denied. Please allow camera access in your browser settings.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setError('No camera found. Please connect a camera and try again.');
-      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
-        setError('Camera is in use by another application. Please close other apps using the camera.');
-      } else {
-        setError('Unable to access camera. Please check your browser settings.');
-      }
-    }
-  };
-
-  const stopCamera = useCallback(() => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
-  }, [stream]);
-
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !isVideoReady) {
+      console.error('Video not ready for capture');
+      return;
+    }
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    if (!ctx) return;
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
 
     // Set canvas dimensions to match video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const width = video.videoWidth || 640;
+    const height = video.videoHeight || 480;
 
-    // Draw the video frame to canvas (mirror for selfie mode)
+    canvas.width = width;
+    canvas.height = height;
+
+    // Reset any previous transforms
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    // Draw the video frame to canvas
+    // Mirror for selfie mode so the captured image matches what user sees
     if (facingMode === 'user') {
-      ctx.translate(canvas.width, 0);
+      ctx.translate(width, 0);
       ctx.scale(-1, 1);
     }
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, width, height);
 
     // Convert to data URL
     const imageData = canvas.toDataURL('image/jpeg', 0.9);
     setCapturedImage(imageData);
-  }, [facingMode]);
+  }, [facingMode, isVideoReady]);
 
   const handleCaptureWithCountdown = useCallback(() => {
     setCountdown(3);
@@ -115,7 +138,7 @@ export default function CameraCapture({
       setCountdown((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(timer);
-          capturePhoto();
+          setTimeout(() => capturePhoto(), 100);
           return null;
         }
         return prev - 1;
@@ -125,7 +148,11 @@ export default function CameraCapture({
 
   const handleRetake = useCallback(() => {
     setCapturedImage(null);
-  }, []);
+    // Restart camera if needed
+    if (!streamRef.current) {
+      startCamera();
+    }
+  }, [startCamera]);
 
   const handleConfirm = useCallback(() => {
     if (capturedImage) {
@@ -140,7 +167,7 @@ export default function CameraCapture({
   }, [stopCamera, onCancel]);
 
   // Loading state
-  if (isLoading) {
+  if (isLoading && !capturedImage) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <div className="w-12 h-12 border-4 border-neutral-700 border-t-amber-200 rounded-full animate-spin mb-4" />
@@ -185,7 +212,6 @@ export default function CameraCapture({
             src={capturedImage}
             alt="Captured"
             className="w-full max-w-sm"
-            style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
           />
           {showGuideCircle && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -212,13 +238,14 @@ export default function CameraCapture({
       {title && <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>}
       {subtitle && <p className="text-neutral-400 mb-4">{subtitle}</p>}
 
-      <div className="relative rounded-xl overflow-hidden mb-6 border-2 border-neutral-600 bg-black">
+      <div className="relative rounded-xl overflow-hidden mb-6 border-2 border-neutral-600 bg-black" style={{ minHeight: '240px', minWidth: '320px' }}>
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="w-full max-w-sm"
+          onCanPlay={handleVideoCanPlay}
+          className="w-full max-w-sm block"
           style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
         />
 
@@ -238,7 +265,7 @@ export default function CameraCapture({
       </div>
 
       {/* Hidden canvas for capturing */}
-      <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       <div className="flex gap-3 w-full">
         {onCancel && (
@@ -250,7 +277,7 @@ export default function CameraCapture({
           onClick={handleCaptureWithCountdown}
           variant="gold"
           className="flex-1"
-          disabled={countdown !== null}
+          disabled={countdown !== null || !isVideoReady}
         >
           {countdown !== null ? `${countdown}...` : captureLabel}
         </Button>
