@@ -1,28 +1,72 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { Button } from '@/components/ui';
+import { Button, Badge } from '@/components/ui';
 import TicketCard from '@/components/TicketCard';
-import { mockTickets, getEventById } from '@/lib/mock-data';
+import AuctionCountdown from '@/components/AuctionCountdown';
+import { mockTickets, getEventById, getTicketById, formatCurrency } from '@/lib/mock-data';
+import { getUserPurchases } from '@/lib/purchase-store';
+import { getActiveBids, getUnreadNotifications, StoredBid, OutbidNotification } from '@/lib/bid-store';
+import { getActiveSellerListings, StoredListing } from '@/lib/listing-store';
 
 type FilterType = 'all' | 'upcoming' | 'past';
 
 export default function WalletPage() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<FilterType>('upcoming');
+  const [activeBids, setActiveBids] = useState<StoredBid[]>([]);
+  const [notifications, setNotifications] = useState<OutbidNotification[]>([]);
+  const [activeListings, setActiveListings] = useState<StoredListing[]>([]);
 
-  // Get user's tickets with event data
+  // Load active bids and listings
+  useEffect(() => {
+    if (user) {
+      setActiveBids(getActiveBids(user.id));
+      setNotifications(getUnreadNotifications(user.id));
+      setActiveListings(getActiveSellerListings(user.id));
+    }
+  }, [user]);
+
+  // Get user's tickets with event data (including purchased tickets)
   const userTickets = useMemo(() => {
-    return mockTickets
-      .filter(ticket => ticket.ownerId === user?.id)
+    if (!user) return [];
+
+    // Get tickets owned by user (from mock data)
+    const ownedTickets = mockTickets
+      .filter(ticket => ticket.ownerId === user.id)
       .map(ticket => ({
         ticket,
         event: getEventById(ticket.eventId)!,
+        isPurchased: false,
       }))
       .filter(({ event }) => event !== undefined);
-  }, [user?.id]);
+
+    // Get tickets purchased by user (from localStorage)
+    const purchases = getUserPurchases(user.id);
+    const purchasedTickets = purchases
+      .map(purchase => {
+        const ticket = getTicketById(purchase.ticketId);
+        if (!ticket) return null;
+        const event = getEventById(purchase.eventId);
+        if (!event) return null;
+        return {
+          ticket,
+          event,
+          isPurchased: true,
+        };
+      })
+      .filter((item): item is { ticket: any; event: any; isPurchased: boolean } => item !== null);
+
+    // Combine and deduplicate (in case a ticket appears in both lists)
+    const allTickets = [...ownedTickets, ...purchasedTickets];
+    const uniqueTickets = allTickets.filter(
+      (item, index, self) => self.findIndex(t => t.ticket.id === item.ticket.id) === index
+    );
+
+    return uniqueTickets;
+  }, [user]);
 
   // Filter tickets
   const filteredTickets = useMemo(() => {
@@ -57,10 +101,170 @@ export default function WalletPage() {
           <h1 className="text-2xl font-bold text-white">My Tickets</h1>
           <p className="text-neutral-400">Manage your concert tickets</p>
         </div>
-        <Link href="/marketplace">
-          <Button variant="gold">Browse Marketplace</Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/wallet/listings">
+            <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700 relative">
+              My Listings
+              {activeListings.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full text-xs font-bold text-white flex items-center justify-center">
+                  {activeListings.length}
+                </span>
+              )}
+            </Button>
+          </Link>
+          <Link href="/wallet/bids">
+            <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700 relative">
+              My Bids
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 rounded-full text-xs font-bold text-neutral-900 flex items-center justify-center">
+                  {notifications.length}
+                </span>
+              )}
+            </Button>
+          </Link>
+          <Link href="/marketplace">
+            <Button variant="gold">Browse Marketplace</Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Active Listings Banner */}
+      {activeListings.length > 0 && (
+        <div className="bg-emerald-900/30 rounded-xl p-4 border border-emerald-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-emerald-300">
+                  {activeListings.length} Active Listing{activeListings.length > 1 ? 's' : ''}
+                </h3>
+                <p className="text-sm text-emerald-400/80 mt-1">
+                  {activeListings.filter(l => l.listingType === 'auction').length > 0
+                    ? `You have ${activeListings.filter(l => l.listingType === 'auction').length} auction${activeListings.filter(l => l.listingType === 'auction').length > 1 ? 's' : ''} in progress.`
+                    : 'Your tickets are listed on the marketplace.'}
+                </p>
+              </div>
+            </div>
+            <Link href="/wallet/listings">
+              <Button size="sm" variant="outline" className="border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/30">
+                Manage Listings
+              </Button>
+            </Link>
+          </div>
+
+          {/* Quick preview of active listings */}
+          {activeListings.slice(0, 2).map((listing) => (
+            <div
+              key={listing.id}
+              className="mt-4 pt-4 border-t border-emerald-700/30 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-900/50 rounded-lg flex items-center justify-center">
+                  <span className="text-emerald-300 font-bold">{listing.eventArtist.charAt(0)}</span>
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">{listing.eventArtist}</p>
+                  <p className="text-emerald-400/70 text-xs">
+                    {listing.listingType === 'auction'
+                      ? `Starting at ${formatCurrency(listing.minimumBid || 0, listing.currency)}`
+                      : `Listed at ${formatCurrency(listing.askingPrice, listing.currency)}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <Badge variant={listing.listingType === 'auction' ? 'info' : 'success'} size="sm">
+                  {listing.listingType === 'auction' ? 'Auction' : 'Fixed Price'}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Active Bids Banner */}
+      {activeBids.length > 0 && (
+        <div className="bg-blue-900/30 rounded-xl p-4 border border-blue-700/50">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-300">
+                  {activeBids.length} Active Bid{activeBids.length > 1 ? 's' : ''}
+                </h3>
+                <p className="text-sm text-blue-400/80 mt-1">
+                  {activeBids.filter(b => b.status === 'winning').length > 0
+                    ? `You're winning ${activeBids.filter(b => b.status === 'winning').length} auction${activeBids.filter(b => b.status === 'winning').length > 1 ? 's' : ''}!`
+                    : 'You have active bids on auction tickets.'}
+                </p>
+              </div>
+            </div>
+            <Link href="/wallet/bids">
+              <Button size="sm" variant="outline" className="border-blue-500/50 text-blue-300 hover:bg-blue-900/30">
+                View Bids
+              </Button>
+            </Link>
+          </div>
+
+          {/* Quick preview of active bids */}
+          {activeBids.slice(0, 2).map((bid) => (
+            <div
+              key={bid.id}
+              className="mt-4 pt-4 border-t border-blue-700/30 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-900/50 rounded-lg flex items-center justify-center">
+                  <span className="text-blue-300 font-bold">{bid.eventArtist.charAt(0)}</span>
+                </div>
+                <div>
+                  <p className="text-white font-medium text-sm">{bid.eventArtist}</p>
+                  <p className="text-blue-400/70 text-xs">
+                    Your bid: {formatCurrency(bid.amount, bid.currency)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                {bid.status === 'winning' ? (
+                  <Badge variant="success" size="sm">Winning</Badge>
+                ) : (
+                  <Badge variant="warning" size="sm">Outbid</Badge>
+                )}
+                <AuctionCountdown endsAt={bid.auctionEndsAt} size="sm" showLabel={false} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Outbid Alert */}
+      {notifications.length > 0 && (
+        <div className="bg-amber-900/30 rounded-xl p-4 border border-amber-700/50">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-300">You&apos;ve been outbid!</h3>
+              <p className="text-sm text-amber-400/80 mt-1">
+                Someone placed a higher bid on {notifications.length} auction{notifications.length > 1 ? 's' : ''}.
+                Increase your bid to stay in the running.
+              </p>
+              <Link href="/wallet/bids">
+                <Button size="sm" variant="gold" className="mt-3">View & Rebid</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -77,7 +281,7 @@ export default function WalletPage() {
           <p className="text-2xl font-bold text-orange-400">{stats.listed}</p>
         </div>
         <div className="bg-neutral-700/50 rounded-xl p-4 border border-neutral-600/50">
-          <p className="text-sm text-neutral-400">Cleared by PASSPORT</p>
+          <p className="text-sm text-neutral-400">Cleared by T-PASSPORT</p>
           <p className="text-2xl font-bold text-emerald-400">{stats.cleared}</p>
         </div>
       </div>
@@ -145,7 +349,7 @@ export default function WalletPage() {
 
       {/* Tickets grid */}
       {filteredTickets.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredTickets.map(({ ticket, event }) => (
             <TicketCard key={ticket.id} ticket={ticket} event={event} />
           ))}

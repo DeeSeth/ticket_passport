@@ -1,21 +1,98 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
 import { Button, Badge, Input } from '@/components/ui';
-import ResaleRulesDisplay from '@/components/ResaleRules';
-import { getActiveListings, formatCurrency, getMaxResalePrice } from '@/lib/mock-data';
-import { canAccessMarketplace } from '@/lib/verification-utils';
+import DiscoverEventCard from '@/components/DiscoverEventCard';
+import ListingCard from '@/components/ListingCard';
+import { getActiveListings as getMockActiveListings } from '@/lib/mock-data';
+import { getActiveListings as getUserActiveListings, StoredListing } from '@/lib/listing-store';
+import { useEventsSearch } from '@/lib/hooks/use-events';
+import { Ticket, Event, ResaleListing } from '@/lib/types';
+import { useAuth } from '@/lib/auth-context';
+
+// Transform StoredListing to the format ListingCard expects
+function transformStoredListing(stored: StoredListing): ResaleListing & { ticket: Ticket; event: Event } {
+  const event: Event = {
+    id: stored.eventId,
+    name: stored.eventName,
+    artist: stored.eventArtist,
+    venue: stored.eventVenue,
+    city: stored.eventCity,
+    country: stored.eventCountry,
+    date: stored.eventDate,
+    resaleRules: {
+      maxPriceMultiplier: 2,
+      fanOnlyWindowHours: 24,
+      transferDeadlineHours: 2,
+      requiresIdMatch: false,
+      charityPercentage: 10,
+    },
+  };
+
+  const ticket: Ticket = {
+    id: stored.ticketId,
+    eventId: stored.eventId,
+    ownerId: stored.sellerId,
+    section: stored.section,
+    row: stored.row,
+    seat: stored.seat,
+    faceValue: stored.faceValue,
+    currency: stored.currency,
+    isCleared: true,
+    resaleStatus: 'listed',
+    resalePrice: stored.askingPrice,
+    barcode: `BARCODE-${stored.ticketId}`,
+    purchasedAt: new Date(),
+    originalOwnerId: stored.sellerId,
+    transferHistory: [],
+  };
+
+  const listing: ResaleListing = {
+    id: stored.id,
+    ticketId: stored.ticketId,
+    sellerId: stored.sellerId,
+    askingPrice: stored.askingPrice,
+    listedAt: new Date(stored.listedAt),
+    status: stored.status === 'active' ? 'active' : stored.status === 'sold' ? 'sold' : 'cancelled',
+    isAuction: stored.listingType === 'auction',
+    minimumBid: stored.minimumBid,
+    reservePrice: stored.reservePrice,
+    auctionEndsAt: stored.auctionEndsAt ? new Date(stored.auctionEndsAt) : undefined,
+    currentHighestBid: stored.currentHighestBid,
+    totalBids: stored.totalBids,
+  };
+
+  return { ...listing, ticket, event };
+}
 
 export default function MarketplacePage() {
-  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'price_low' | 'price_high'>('date');
-  const isVerified = canAccessMarketplace(user);
+  const [viewMode, setViewMode] = useState<'all' | 'resale' | 'events'>('all');
+  const [userListings, setUserListings] = useState<(ResaleListing & { ticket: Ticket; event: Event })[]>([]);
+  const { user } = useAuth();
+
+  // Load user-created listings from localStorage
+  useEffect(() => {
+    const storedListings = getUserActiveListings();
+    // Filter out listings from current user (they shouldn't see their own listings to buy)
+    const otherUserListings = storedListings.filter(l => l.sellerId !== user?.id);
+    const transformed = otherUserListings.map(transformStoredListing);
+    setUserListings(transformed);
+  }, [user?.id]);
+
+  // Fetch Ticketmaster events
+  const { events, loading: eventsLoading } = useEventsSearch({
+    keyword: searchQuery || undefined,
+    size: 10,
+    sort: 'date,asc',
+  });
 
   const listings = useMemo(() => {
-    let results = getActiveListings();
+    // Combine mock listings with user-created listings
+    const mockListings = getMockActiveListings();
+    let results = [...mockListings, ...userListings];
 
     // Filter by search query
     if (searchQuery) {
@@ -44,7 +121,20 @@ export default function MarketplacePage() {
     }
 
     return results;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, userListings]);
+
+  // Filter events by search query
+  const filteredEvents = useMemo(() => {
+    if (!searchQuery) return events;
+    const query = searchQuery.toLowerCase();
+    return events.filter(
+      (event) =>
+        event.artist.toLowerCase().includes(query) ||
+        event.name.toLowerCase().includes(query) ||
+        event.venue.toLowerCase().includes(query) ||
+        event.city.toLowerCase().includes(query)
+    );
+  }, [events, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -53,30 +143,6 @@ export default function MarketplacePage() {
         <h1 className="text-2xl font-bold text-white">Marketplace</h1>
         <p className="text-neutral-400">Browse verified resale tickets with Entry Guarantee</p>
       </div>
-
-      {/* Verification warning for unverified users */}
-      {!isVerified && (
-        <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-200/20 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div>
-                <p className="font-semibold text-amber-200">Browsing Only</p>
-                <p className="text-sm text-neutral-400">Complete verification to buy tickets</p>
-              </div>
-            </div>
-            <Link href="/verify">
-              <Button variant="gold" size="sm">
-                Verify Now
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* Trust banner */}
       <div className="bg-amber-200/10 rounded-xl p-4 border border-amber-200/20">
@@ -87,12 +153,46 @@ export default function MarketplacePage() {
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold text-amber-200">PASSPORT Protected</h3>
+            <h3 className="font-semibold text-amber-200">T-PASSPORT Protected</h3>
             <p className="text-sm text-neutral-400 mt-1">
-              All tickets on this marketplace are cleared by PASSPORT. Your purchase is protected by our Entry Guarantee.
+              All tickets on this marketplace are cleared by T-PASSPORT. Your purchase is protected by our Entry Guarantee.
             </p>
           </div>
         </div>
+      </div>
+
+      {/* View mode tabs */}
+      <div className="flex gap-2 border-b border-neutral-700">
+        <button
+          onClick={() => setViewMode('all')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            viewMode === 'all'
+              ? 'border-amber-200 text-amber-200'
+              : 'border-transparent text-neutral-400 hover:text-white'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setViewMode('resale')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            viewMode === 'resale'
+              ? 'border-amber-200 text-amber-200'
+              : 'border-transparent text-neutral-400 hover:text-white'
+          }`}
+        >
+          Resale Tickets ({listings.length})
+        </button>
+        <button
+          onClick={() => setViewMode('events')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+            viewMode === 'events'
+              ? 'border-amber-200 text-amber-200'
+              : 'border-transparent text-neutral-400 hover:text-white'
+          }`}
+        >
+          Upcoming Events ({filteredEvents.length})
+        </button>
       </div>
 
       {/* Search and filters */}
@@ -105,112 +205,102 @@ export default function MarketplacePage() {
             dark
           />
         </div>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-          className="px-4 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-        >
-          <option value="date">Sort by Date</option>
-          <option value="price_low">Price: Low to High</option>
-          <option value="price_high">Price: High to Low</option>
-        </select>
+        {viewMode !== 'events' && (
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="px-4 py-2.5 rounded-lg border border-neutral-700 bg-neutral-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+          >
+            <option value="date">Sort by Date</option>
+            <option value="price_low">Price: Low to High</option>
+            <option value="price_high">Price: High to Low</option>
+          </select>
+        )}
       </div>
 
-      {/* Listings */}
-      {listings.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {listings.map((listing) => {
-            const maxPrice = getMaxResalePrice(listing.ticket, listing.event);
-            const isPriceWithinCap = listing.askingPrice <= maxPrice;
-            const savings = maxPrice - listing.askingPrice;
+      {/* Resale Listings Section */}
+      {(viewMode === 'all' || viewMode === 'resale') && listings.length > 0 && (
+        <>
+          {viewMode === 'all' && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Resale Tickets</h2>
+              <Link href="/marketplace?view=resale">
+                <Button variant="outline" size="sm" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {listings.slice(0, viewMode === 'all' ? 6 : undefined).map((listing) => (
+              <ListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </>
+      )}
 
-            return (
-              <div key={listing.id} className="bg-neutral-700/50 rounded-xl border border-neutral-600/50 overflow-hidden hover:border-amber-200/30 transition-colors">
-                <div className="flex flex-col sm:flex-row">
-                  {/* Event image placeholder */}
-                  <div className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-neutral-700 to-neutral-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-amber-200/20 text-4xl font-bold">
-                      {listing.event.artist.charAt(0)}
-                    </span>
-                  </div>
+      {/* Ticketmaster Events Section */}
+      {(viewMode === 'all' || viewMode === 'events') && (
+        <>
+          {viewMode === 'all' && (
+            <div className="flex items-center justify-between mt-8">
+              <h2 className="text-xl font-bold text-white">Upcoming Events</h2>
+              <Link href="/discover">
+                <Button variant="outline" size="sm" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">
+                  View All
+                </Button>
+              </Link>
+            </div>
+          )}
 
-                  {/* Listing details */}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <h3 className="font-bold text-white">{listing.event.artist}</h3>
-                        <p className="text-sm text-neutral-400">{listing.event.name}</p>
-                      </div>
-                      <Badge variant="cleared" size="sm">Cleared</Badge>
-                    </div>
-
-                    <p className="text-sm text-neutral-500">
-                      {listing.event.venue}, {listing.event.city}
-                    </p>
-                    <p className="text-sm text-neutral-500 mb-3">
-                      {new Date(listing.event.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </p>
-
-                    <div className="flex items-center gap-2 text-sm text-neutral-400 mb-3">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                      </svg>
-                      {listing.ticket.section} • Row {listing.ticket.row} • Seat {listing.ticket.seat}
-                    </div>
-
-                    {/* Price section */}
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-xs text-neutral-500">
-                          Face value: {formatCurrency(listing.ticket.faceValue, listing.ticket.currency)}
-                        </p>
-                        <p className="text-xl font-bold text-amber-200">
-                          {formatCurrency(listing.askingPrice, listing.ticket.currency)}
-                        </p>
-                        {isPriceWithinCap && savings > 0 && (
-                          <p className="text-xs text-emerald-400">
-                            {formatCurrency(savings, listing.ticket.currency)} below cap
-                          </p>
-                        )}
-                      </div>
-                      <Link href={`/marketplace/${listing.id}`}>
-                        <Button size="sm" variant="gold">View Details</Button>
-                      </Link>
-                    </div>
-
-                    {/* Resale rules summary */}
-                    <div className="mt-3 pt-3 border-t border-neutral-600/50">
-                      <ResaleRulesDisplay
-                        rules={listing.event.resaleRules}
-                        faceValue={listing.ticket.faceValue}
-                        currency={listing.ticket.currency}
-                        compact
-                        dark
-                      />
-                    </div>
-                  </div>
-                </div>
+          {eventsLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-neutral-700 border-t-amber-200"></div>
+              <p className="text-neutral-400 mt-4">Loading events...</p>
+            </div>
+          ) : filteredEvents.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredEvents.slice(0, viewMode === 'all' ? 6 : undefined).map((event) => (
+                <DiscoverEventCard
+                  key={event.id}
+                  event={event}
+                  href={`/discover/${event.id}`}
+                  badge="Event"
+                  badgeVariant="info"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-neutral-700/50 rounded-xl p-8 border border-neutral-600/50 text-center">
+              <div className="w-16 h-16 bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-            );
-          })}
-        </div>
-      ) : (
+              <h3 className="font-semibold text-white mb-1">No events found</h3>
+              <p className="text-neutral-400">
+                {searchQuery
+                  ? `No events found for "${searchQuery}". Try a different search.`
+                  : 'No upcoming events available at this time.'}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Empty state when both are empty */}
+      {viewMode === 'resale' && listings.length === 0 && (
         <div className="bg-neutral-700/50 rounded-xl p-8 border border-neutral-600/50 text-center">
           <div className="w-16 h-16 bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="font-semibold text-white mb-1">No tickets found</h3>
+          <h3 className="font-semibold text-white mb-1">No resale tickets found</h3>
           <p className="text-neutral-400">
             {searchQuery
-              ? `No results for "${searchQuery}". Try a different search.`
-              : 'No tickets are currently available on the marketplace.'}
+              ? `No resale tickets found for "${searchQuery}". Try a different search.`
+              : 'No tickets are currently available for resale on the marketplace.'}
           </p>
         </div>
       )}

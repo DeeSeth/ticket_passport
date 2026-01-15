@@ -41,8 +41,8 @@ export interface Event {
   venue: string;
   city: string;
   country: string;
-  date: Date;
-  imageUrl: string;
+  date: string; // ISO 8601 date string for API compatibility
+  imageUrl?: string;
   description?: string;
   resaleRules: ResaleRules;
 }
@@ -67,8 +67,8 @@ export interface Ticket {
   seat: string;
   faceValue: number;
   currency: string;
-  isCleared: boolean; // Verified by PASSPORT
-  resaleStatus: 'not_listed' | 'listed' | 'pending_transfer' | 'sold';
+  isCleared: boolean; // Verified by T-PASSPORT
+  resaleStatus: 'not_listed' | 'listed' | 'in_auction' | 'pending_transfer' | 'sold';
   resalePrice?: number;
   barcode: string;
   purchasedAt: Date;
@@ -95,6 +95,26 @@ export interface ResaleListing {
   listedAt: Date;
   status: 'active' | 'pending' | 'sold' | 'cancelled';
   expiresAt?: Date;
+  // Auction/bidding fields
+  isAuction?: boolean;
+  minimumBid?: number;
+  reservePrice?: number; // Minimum price seller will accept
+  auctionEndsAt?: Date;
+  currentHighestBid?: number;
+  totalBids?: number;
+}
+
+// Bid on an auction listing
+export interface Bid {
+  id: string;
+  listingId: string;
+  bidderId: string;
+  bidderName: string;
+  amount: number;
+  bidAt: Date;
+  status: 'active' | 'outbid' | 'winning' | 'won' | 'lost' | 'withdrawn';
+  isAutoBid?: boolean; // For auto-bidding feature
+  maxAutoBid?: number; // Maximum amount for auto-bidding
 }
 
 // Purchase/escrow state

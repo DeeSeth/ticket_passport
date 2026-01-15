@@ -11,7 +11,7 @@ export default function LandingPage() {
               <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                 <span className="text-amber-200 font-bold text-xl">P</span>
               </div>
-              <span className="font-medium text-white text-lg tracking-wide">PASSPORT</span>
+              <span className="font-medium text-white text-lg tracking-wide">T-PASSPORT</span>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/login" className="text-neutral-300 hover:text-white font-medium transition-colors">
@@ -106,7 +106,7 @@ export default function LandingPage() {
       <section className="py-24 bg-neutral-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">How PASSPORT Works</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">How T-PASSPORT Works</h2>
             <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
               Three layers of protection that make resale safe for everyone.
             </p>
@@ -171,7 +171,7 @@ export default function LandingPage() {
                 <span className="text-amber-200">Get Your Money Back.</span>
               </h2>
               <p className="text-xl text-neutral-400 mb-8">
-                Every ticket cleared by PASSPORT comes with our Entry Guarantee. If you&apos;re turned away at the door, you receive an automatic full refund. No disputes. No waiting.
+                Every ticket cleared by T-PASSPORT comes with our Entry Guarantee. If you&apos;re turned away at the door, you receive an automatic full refund. No disputes. No waiting.
               </p>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3 text-neutral-300">
@@ -210,7 +210,7 @@ export default function LandingPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-xl">Cleared by PASSPORT</h3>
+                  <h3 className="font-bold text-white text-xl">Cleared by T-PASSPORT</h3>
                   <p className="text-amber-200">Entry Guaranteed</p>
                 </div>
               </div>
@@ -330,7 +330,7 @@ export default function LandingPage() {
             <span className="text-amber-200">Live Music Differently?</span>
           </h2>
           <p className="text-xl text-neutral-400 mb-10 max-w-2xl mx-auto">
-            Join thousands of fans who trust PASSPORT for safe concert ticket resale.
+            Join thousands of fans who trust T-PASSPORT for safe concert ticket resale.
           </p>
           <Link
             href="/signup"
@@ -353,7 +353,7 @@ export default function LandingPage() {
                 <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                   <span className="text-amber-200 font-bold text-xl">P</span>
                 </div>
-                <span className="font-medium text-white text-lg">PASSPORT</span>
+                <span className="font-medium text-white text-lg">T-PASSPORT</span>
               </div>
               <p className="text-neutral-500 text-sm">
                 The global standard for concert entry and safe resale.
@@ -385,7 +385,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-neutral-800 text-center text-neutral-500 text-sm">
-            <p>&copy; 2026 Ticket PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
+            <p>&copy; 2026 Ticket T-PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
           </div>
         </div>
       </footer>

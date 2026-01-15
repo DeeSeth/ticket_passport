@@ -11,7 +11,7 @@ export default function ForArtistsPage() {
               <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                 <span className="text-amber-200 font-bold text-xl">P</span>
               </div>
-              <span className="font-medium text-white text-lg tracking-wide">PASSPORT</span>
+              <span className="font-medium text-white text-lg tracking-wide">T-PASSPORT</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/login" className="text-neutral-300 hover:text-white font-medium transition-colors">
@@ -82,7 +82,7 @@ export default function ForArtistsPage() {
               </div>
             </div>
             <div className="bg-neutral-800/50 rounded-2xl p-8 border border-neutral-700/50">
-              <h3 className="text-lg font-semibold text-white mb-6">Without PASSPORT</h3>
+              <h3 className="text-lg font-semibold text-white mb-6">Without T-PASSPORT</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-3 text-neutral-400">
                   <div className="w-6 h-6 bg-red-500/20 rounded-full flex items-center justify-center">
@@ -306,7 +306,7 @@ export default function ForArtistsPage() {
       <section className="py-24 bg-neutral-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Why Artists Choose PASSPORT</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">Why Artists Choose T-PASSPORT</h2>
             <p className="text-xl text-neutral-400 max-w-2xl mx-auto">
               Join hundreds of artists taking control of their ticket economy.
             </p>
@@ -364,7 +364,7 @@ export default function ForArtistsPage() {
               <div>
                 <h3 className="text-lg font-bold text-white mb-2">Zero Fraud Guarantee</h3>
                 <p className="text-neutral-400">
-                  Every ticket on PASSPORT is verified. Your fans are protected by our Entry Guarantee, which means better experiences at your shows.
+                  Every ticket on T-PASSPORT is verified. Your fans are protected by our Entry Guarantee, which means better experiences at your shows.
                 </p>
               </div>
             </div>
@@ -402,7 +402,7 @@ export default function ForArtistsPage() {
                 <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
                   <span className="text-amber-200 font-bold text-xl">P</span>
                 </div>
-                <span className="font-medium text-white text-lg">PASSPORT</span>
+                <span className="font-medium text-white text-lg">T-PASSPORT</span>
               </div>
               <p className="text-neutral-500 text-sm">
                 The global standard for concert entry and safe resale.
@@ -434,7 +434,7 @@ export default function ForArtistsPage() {
             </div>
           </div>
           <div className="pt-8 border-t border-neutral-800 text-center text-neutral-500 text-sm">
-            <p>&copy; 2026 Ticket PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
+            <p>&copy; 2026 Ticket T-PASSPORT. The Global Standard for Concert Entry + Safe Resale.</p>
           </div>
         </div>
       </footer>

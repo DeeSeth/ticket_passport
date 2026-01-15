@@ -25,7 +25,7 @@ export default function AuthLayout({
             <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center border border-neutral-700">
               <span className="text-amber-200 font-bold text-2xl">P</span>
             </div>
-            <span className="font-medium text-xl tracking-wide">PASSPORT</span>
+            <span className="font-medium text-xl tracking-wide">T-PASSPORT</span>
           </Link>
 
           <div className="space-y-6">
@@ -55,7 +55,7 @@ export default function AuthLayout({
           </div>
 
           <p className="text-neutral-500 text-sm">
-            &copy; 2026 Ticket PASSPORT. The Global Standard for Concert Entry.
+            &copy; 2026 Ticket T-PASSPORT. The Global Standard for Concert Entry.
           </p>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function AuthLayout({
             <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700">
               <span className="text-amber-200 font-bold text-xl">P</span>
             </div>
-            <span className="text-white font-medium text-lg">PASSPORT</span>
+            <span className="text-white font-medium text-lg">T-PASSPORT</span>
           </Link>
         </header>
 
@@ -81,7 +81,7 @@ export default function AuthLayout({
 
         {/* Mobile footer */}
         <footer className="lg:hidden p-6 text-center text-neutral-500 text-sm border-t border-neutral-800">
-          <p>&copy; 2026 Ticket PASSPORT</p>
+          <p>&copy; 2026 Ticket T-PASSPORT</p>
         </footer>
       </div>
     </div>
