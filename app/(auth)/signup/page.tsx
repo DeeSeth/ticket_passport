@@ -35,7 +35,7 @@ export default function SignupPage() {
     try {
       const success = await signup(email, password, name);
       if (success) {
-        router.push('/verify');
+        router.push('/verify-email');
       } else {
         setError('Could not create account. Please try again.');
       }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { Button, Input, Badge } from '@/components/ui';
 import ResaleRulesDisplay from '@/components/ResaleRules';
+import { canAccessMarketplace } from '@/lib/verification-utils';
 import {
   mockTickets,
   getEventById,
@@ -101,6 +102,80 @@ export default function SellPage() {
       )
     : 0;
   const sellerPayout = numericPrice - platformFee - charityAmount;
+
+  // Hard gate for unverified users
+  if (!canAccessMarketplace(user)) {
+    return (
+      <div className="max-w-md mx-auto">
+        <div className="bg-neutral-700/50 rounded-xl p-8 border border-neutral-600/50 text-center">
+          <div className="w-16 h-16 bg-amber-200/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Verification Required</h2>
+          <p className="text-neutral-400 mb-6">
+            Complete all verification steps to start selling tickets on the marketplace.
+          </p>
+
+          {/* Verification checklist */}
+          <div className="bg-neutral-800 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm font-medium text-neutral-400 mb-3">Verification Status</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                {user?.verification?.emailVerified ? (
+                  <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                  </svg>
+                )}
+                <span className={user?.verification?.emailVerified ? 'text-white' : 'text-neutral-500'}>
+                  Email Verification
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {user?.verification?.phoneVerified ? (
+                  <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                  </svg>
+                )}
+                <span className={user?.verification?.phoneVerified ? 'text-white' : 'text-neutral-500'}>
+                  Phone Verification
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {user?.verification?.idVerified ? (
+                  <svg className="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                  </svg>
+                )}
+                <span className={user?.verification?.idVerified ? 'text-white' : 'text-neutral-500'}>
+                  ID Verification
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Link href="/verify">
+            <Button variant="gold" size="lg" className="w-full">
+              Complete Verification
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'success') {
     return (

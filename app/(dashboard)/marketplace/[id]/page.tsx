@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Button, Badge } from '@/components/ui';
 import PassportScore from '@/components/PassportScore';
 import ResaleRulesDisplay from '@/components/ResaleRules';
+import { canAccessMarketplace } from '@/lib/verification-utils';
 import {
   getListingById,
   getTicketById,
@@ -313,9 +314,27 @@ export default function MarketplaceDetailPage() {
               </div>
             </div>
 
-            <Button onClick={() => setStep('confirm')} variant="gold" className="w-full" size="lg">
-              Buy Now
-            </Button>
+            {canAccessMarketplace(user) ? (
+              <Button onClick={() => setStep('confirm')} variant="gold" className="w-full" size="lg">
+                Buy Now
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <Button variant="gold" className="w-full" size="lg" disabled>
+                  Buy Now
+                </Button>
+                <div className="bg-amber-200/10 rounded-lg p-3 border border-amber-200/20">
+                  <p className="text-sm text-amber-200 text-center mb-2">
+                    Complete verification to purchase tickets
+                  </p>
+                  <Link href="/verify">
+                    <Button variant="outline" size="sm" className="w-full border-amber-200/30 text-amber-200 hover:bg-amber-200/10">
+                      Verify Now
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Seller info */}

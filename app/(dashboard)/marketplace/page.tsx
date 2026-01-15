@@ -2,13 +2,17 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 import { Button, Badge, Input } from '@/components/ui';
 import ResaleRulesDisplay from '@/components/ResaleRules';
 import { getActiveListings, formatCurrency, getMaxResalePrice } from '@/lib/mock-data';
+import { canAccessMarketplace } from '@/lib/verification-utils';
 
 export default function MarketplacePage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'price_low' | 'price_high'>('date');
+  const isVerified = canAccessMarketplace(user);
 
   const listings = useMemo(() => {
     let results = getActiveListings();
@@ -49,6 +53,30 @@ export default function MarketplacePage() {
         <h1 className="text-2xl font-bold text-white">Marketplace</h1>
         <p className="text-neutral-400">Browse verified resale tickets with Entry Guarantee</p>
       </div>
+
+      {/* Verification warning for unverified users */}
+      {!isVerified && (
+        <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-200/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-amber-200">Browsing Only</p>
+                <p className="text-sm text-neutral-400">Complete verification to buy tickets</p>
+              </div>
+            </div>
+            <Link href="/verify">
+              <Button variant="gold" size="sm">
+                Verify Now
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Trust banner */}
       <div className="bg-amber-200/10 rounded-xl p-4 border border-amber-200/20">
