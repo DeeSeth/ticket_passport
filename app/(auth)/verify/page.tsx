@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/lib/auth-context';
+import CameraCapture from '@/components/CameraCapture';
 
 type VerificationStep =
   | 'intro'
@@ -43,6 +44,7 @@ export default function VerifyPage() {
   const [idFrontUploaded, setIdFrontUploaded] = useState(false);
   const [idBackUploaded, setIdBackUploaded] = useState(false);
   const [selfieUploaded, setSelfieUploaded] = useState(false);
+  const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [processingStep, setProcessingStep] = useState(0);
 
   // Redirect if not authenticated
@@ -585,41 +587,61 @@ export default function VerifyPage() {
               <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
               <div className="w-3 h-3 rounded-full bg-amber-200"></div>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Take a Selfie</h2>
-            <p className="text-neutral-400 mb-6">We&apos;ll match your face with your ID photo</p>
 
-            <div className="border-2 border-dashed border-neutral-600 rounded-xl p-8 mb-6 bg-neutral-800/50">
-              {selfieUploaded ? (
-                <div className="text-emerald-400">
-                  <svg className="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <p className="font-medium">Selfie Captured</p>
-                </div>
-              ) : (
-                <>
-                  <div className="w-32 h-32 mx-auto border-4 border-neutral-600 rounded-full flex items-center justify-center mb-4">
-                    <svg className="w-16 h-16 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            {selfieUploaded && selfieImage ? (
+              // Show captured selfie
+              <div>
+                <h2 className="text-xl font-bold text-white mb-2">Selfie Captured!</h2>
+                <p className="text-neutral-400 mb-6">Your selfie has been captured successfully</p>
+
+                <div className="relative rounded-xl overflow-hidden mb-6 border-2 border-emerald-500/50 mx-auto max-w-xs">
+                  <img
+                    src={selfieImage}
+                    alt="Captured selfie"
+                    className="w-full"
+                  />
+                  <div className="absolute top-2 right-2 bg-emerald-500 rounded-full p-1">
+                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <p className="text-neutral-500">Position your face in the circle</p>
-                </>
-              )}
-            </div>
+                </div>
 
-            <Button
-              onClick={async () => {
-                await simulateUpload(setSelfieUploaded, 'selfie');
-                setTimeout(handleProcessing, 500);
-              }}
-              variant="gold"
-              className="w-full"
-              size="lg"
-              disabled={selfieUploaded}
-            >
-              {selfieUploaded ? 'Processing...' : 'Capture Selfie'}
-            </Button>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => {
+                      setSelfieUploaded(false);
+                      setSelfieImage(null);
+                    }}
+                    variant="outline"
+                    className="flex-1 border-neutral-600 text-neutral-300"
+                  >
+                    Retake
+                  </Button>
+                  <Button
+                    onClick={handleProcessing}
+                    variant="gold"
+                    className="flex-1"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              // Show camera
+              <CameraCapture
+                onCapture={(imageData) => {
+                  setSelfieImage(imageData);
+                  setSelfieUploaded(true);
+                }}
+                onCancel={() => setStep('id_back')}
+                facingMode="user"
+                captureLabel="Take Selfie"
+                title="Take a Selfie"
+                subtitle="We'll match your face with your ID photo"
+                showGuideCircle
+              />
+            )}
           </div>
         );
 
