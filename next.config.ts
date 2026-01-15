@@ -7,6 +7,19 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      // Ticketmaster image CDN domains
+      {
+        protocol: 'https',
+        hostname: 's1.ticketm.net',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.ticketm.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'media.ticketmaster.com',
+      },
     ],
   },
 };
