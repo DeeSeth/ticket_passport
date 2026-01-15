@@ -38,6 +38,85 @@ export default function CameraCapture({
     }
   }, []);
 
+  // Start camera on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    const initCamera = async () => {
+      setIsLoading(true);
+      setError(null);
+      setIsVideoReady(false);
+
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode,
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
+          audio: false,
+        });
+
+        if (!isMounted) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        streamRef.current = mediaStream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+
+          // Try to play the video
+          try {
+            await videoRef.current.play();
+            if (isMounted) {
+              setIsLoading(false);
+              setIsVideoReady(true);
+            }
+          } catch (playErr) {
+            console.error('Video play error:', playErr);
+            // Video might autoplay, so just set ready after a short delay
+            setTimeout(() => {
+              if (isMounted) {
+                setIsLoading(false);
+                setIsVideoReady(true);
+              }
+            }, 500);
+          }
+        }
+      } catch (err: unknown) {
+        console.error('Camera error:', err);
+        if (!isMounted) return;
+
+        setIsLoading(false);
+
+        const errorObj = err as { name?: string };
+        const errorName = errorObj?.name || '';
+
+        if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
+          setError('Camera access was denied. Please allow camera access in your browser settings.');
+        } else if (errorName === 'NotFoundError' || errorName === 'DevicesNotFoundError') {
+          setError('No camera found. Please connect a camera and try again.');
+        } else if (errorName === 'NotReadableError' || errorName === 'TrackStartError') {
+          setError('Camera is in use by another application. Please close other apps using the camera.');
+        } else {
+          setError('Unable to access camera. Please check your browser settings.');
+        }
+      }
+    };
+
+    initCamera();
+
+    return () => {
+      isMounted = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [facingMode]);
+
   const startCamera = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -57,12 +136,24 @@ export default function CameraCapture({
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        try {
+          await videoRef.current.play();
+          setIsLoading(false);
+          setIsVideoReady(true);
+        } catch (playErr) {
+          console.error('Video play error:', playErr);
+          setTimeout(() => {
+            setIsLoading(false);
+            setIsVideoReady(true);
+          }, 500);
+        }
       }
     } catch (err: unknown) {
       console.error('Camera error:', err);
       setIsLoading(false);
 
-      const errorName = err instanceof Error ? (err as { name?: string }).name : '';
+      const errorObj = err as { name?: string };
+      const errorName = errorObj?.name || '';
 
       if (errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError') {
         setError('Camera access was denied. Please allow camera access in your browser settings.');
@@ -75,23 +166,6 @@ export default function CameraCapture({
       }
     }
   }, [facingMode]);
-
-  // Start camera on mount
-  useEffect(() => {
-    startCamera();
-    return () => {
-      stopCamera();
-    };
-  }, [startCamera, stopCamera]);
-
-  // Handle video loaded
-  const handleVideoCanPlay = useCallback(() => {
-    setIsLoading(false);
-    setIsVideoReady(true);
-    if (videoRef.current) {
-      videoRef.current.play().catch(console.error);
-    }
-  }, []);
 
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || !isVideoReady) {
@@ -244,7 +318,6 @@ export default function CameraCapture({
           autoPlay
           playsInline
           muted
-          onCanPlay={handleVideoCanPlay}
           className="w-full max-w-sm block"
           style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }}
         />
