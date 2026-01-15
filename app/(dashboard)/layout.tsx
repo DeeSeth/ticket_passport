@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import PassportScore from '@/components/PassportScore';
+import VerificationBanner from '@/components/VerificationBanner';
 
 export default function DashboardLayout({
   children,
@@ -140,6 +141,7 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <VerificationBanner user={user} />
         {children}
       </main>
 

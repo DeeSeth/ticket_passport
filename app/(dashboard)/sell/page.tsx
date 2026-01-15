@@ -19,6 +19,7 @@ import {
   getAllListings,
   StoredListing,
 } from '@/lib/listing-store';
+import { canAccessMarketplace, getVerificationGateMessage, getMissingVerifications } from '@/lib/verification-utils';
 
 // Artist-specific accent colors
 const artistColors: Record<string, { gradient: string; solid: string }> = {
@@ -398,6 +399,110 @@ export default function SellPage() {
           </Link>
           <Link href="/wallet/listings">
             <Button variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-700">View My Listings</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Gate access for unverified users
+  if (!canAccessMarketplace(user)) {
+    const missingVerifications = user ? getMissingVerifications(user) : ['email', 'phone', 'id'];
+    return (
+      <div className="max-w-lg mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Sell a Ticket</h1>
+          <p className="text-neutral-400">List your ticket on the T-PASSPORT marketplace</p>
+        </div>
+
+        <div className="bg-amber-900/30 rounded-xl p-6 border border-amber-700/50">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-300 text-lg">Verification Required</h3>
+              <p className="text-amber-400/80 mt-1">
+                {user ? getVerificationGateMessage(user) : 'Sign in to sell tickets.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Verification checklist */}
+          <div className="mt-6 space-y-3">
+            <div className={`flex items-center gap-3 p-3 rounded-lg ${
+              missingVerifications.includes('email') ? 'bg-neutral-800/50' : 'bg-emerald-900/30'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                missingVerifications.includes('email') ? 'bg-neutral-700' : 'bg-emerald-500'
+              }`}>
+                {missingVerifications.includes('email') ? (
+                  <span className="text-neutral-400 font-bold">1</span>
+                ) : (
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <p className={missingVerifications.includes('email') ? 'text-neutral-300' : 'text-emerald-300'}>
+                  Email Verification
+                </p>
+                <p className="text-xs text-neutral-500">+15 points</p>
+              </div>
+            </div>
+
+            <div className={`flex items-center gap-3 p-3 rounded-lg ${
+              missingVerifications.includes('phone') ? 'bg-neutral-800/50' : 'bg-emerald-900/30'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                missingVerifications.includes('phone') ? 'bg-neutral-700' : 'bg-emerald-500'
+              }`}>
+                {missingVerifications.includes('phone') ? (
+                  <span className="text-neutral-400 font-bold">2</span>
+                ) : (
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <p className={missingVerifications.includes('phone') ? 'text-neutral-300' : 'text-emerald-300'}>
+                  Phone Verification
+                </p>
+                <p className="text-xs text-neutral-500">+20 points</p>
+              </div>
+            </div>
+
+            <div className={`flex items-center gap-3 p-3 rounded-lg ${
+              missingVerifications.includes('id') ? 'bg-neutral-800/50' : 'bg-emerald-900/30'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                missingVerifications.includes('id') ? 'bg-neutral-700' : 'bg-emerald-500'
+              }`}>
+                {missingVerifications.includes('id') ? (
+                  <span className="text-neutral-400 font-bold">3</span>
+                ) : (
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <p className={missingVerifications.includes('id') ? 'text-neutral-300' : 'text-emerald-300'}>
+                  ID Verification
+                </p>
+                <p className="text-xs text-neutral-500">+45 points</p>
+              </div>
+            </div>
+          </div>
+
+          <Link href="/verify">
+            <Button variant="gold" className="w-full mt-6">
+              Complete Verification
+            </Button>
           </Link>
         </div>
       </div>

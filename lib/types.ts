@@ -1,10 +1,32 @@
+// Verification score constants
+export const VERIFICATION_SCORES = {
+  EMAIL: 15,
+  PHONE: 20,
+  ID: 45,
+} as const;
+
+export const MARKETPLACE_MIN_SCORE = 80;
+
+// Verification status for each tier
+export interface VerificationStatus {
+  emailVerified: boolean;
+  emailVerifiedAt?: Date;
+  phoneVerified: boolean;
+  phoneVerifiedAt?: Date;
+  phone?: string; // Stored phone number (masked for display)
+  idVerified: boolean;
+  idVerifiedAt?: Date;
+  idType?: 'passport' | 'drivers_license' | 'national_id';
+}
+
 // User types
 export interface User {
   id: string;
   email: string;
   name: string;
-  passportScore: number; // 0-100
-  isVerified: boolean;
+  passportScore: number; // 0-100, computed from verification tiers
+  isVerified: boolean; // Convenience: true if all verifications complete
+  verification: VerificationStatus; // Granular verification tracking
   membershipStatus: 'active' | 'expired' | 'none';
   membershipExpiresAt?: Date;
   createdAt: Date;

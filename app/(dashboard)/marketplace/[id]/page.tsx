@@ -31,6 +31,7 @@ import {
   StoredListing,
   markListingSold,
 } from '@/lib/listing-store';
+import { canAccessMarketplace, getVerificationGateMessage } from '@/lib/verification-utils';
 
 type PurchaseStep = 'details' | 'confirm' | 'processing' | 'success';
 
@@ -757,15 +758,34 @@ export default function MarketplaceDetailPage() {
                       </div>
                     )}
 
-                    <Button
-                      onClick={handlePurchaseOrBid}
-                      variant="gold"
-                      className="w-full"
-                      size="lg"
-                      disabled={!bidAmount || parseFloat(bidAmount) <= 0}
-                    >
-                      Place Bid
-                    </Button>
+                    {canAccessMarketplace(user) ? (
+                      <Button
+                        onClick={handlePurchaseOrBid}
+                        variant="gold"
+                        className="w-full"
+                        size="lg"
+                        disabled={!bidAmount || parseFloat(bidAmount) <= 0}
+                      >
+                        Place Bid
+                      </Button>
+                    ) : (
+                      <div className="space-y-3">
+                        <Button variant="gold" className="w-full opacity-50 cursor-not-allowed" size="lg" disabled>
+                          Place Bid
+                        </Button>
+                        <div className="bg-amber-900/30 rounded-lg p-3 border border-amber-700/50">
+                          <p className="text-sm text-amber-300 font-medium">Verification Required</p>
+                          <p className="text-xs text-amber-400/80 mt-1">
+                            {user ? getVerificationGateMessage(user) : 'Sign in to bid.'}
+                          </p>
+                          <Link href="/verify">
+                            <Button size="sm" variant="outline" className="mt-2 border-amber-500/50 text-amber-300 hover:bg-amber-900/30">
+                              Complete Verification
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </>
@@ -800,9 +820,28 @@ export default function MarketplaceDetailPage() {
                   </div>
                 </div>
 
-                <Button onClick={() => setStep('confirm')} variant="gold" className="w-full" size="lg">
-                  Buy Now
-                </Button>
+                {canAccessMarketplace(user) ? (
+                  <Button onClick={() => setStep('confirm')} variant="gold" className="w-full" size="lg">
+                    Buy Now
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <Button variant="gold" className="w-full opacity-50 cursor-not-allowed" size="lg" disabled>
+                      Buy Now
+                    </Button>
+                    <div className="bg-amber-900/30 rounded-lg p-3 border border-amber-700/50">
+                      <p className="text-sm text-amber-300 font-medium">Verification Required</p>
+                      <p className="text-xs text-amber-400/80 mt-1">
+                        {user ? getVerificationGateMessage(user) : 'Sign in to purchase tickets.'}
+                      </p>
+                      <Link href="/verify">
+                        <Button size="sm" variant="outline" className="mt-2 border-amber-500/50 text-amber-300 hover:bg-amber-900/30">
+                          Complete Verification
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
